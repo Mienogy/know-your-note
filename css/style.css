@@ -271,3 +271,49 @@ button,
 }
 
 /* Keep the rest of your existing CSS */
+
+/* Ensure main content takes full height */
+#mainContent {
+    height: 100vh;
+    overflow-y: auto;
+}
+
+/* Login section full screen centering */
+#loginSection {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #f3f4f6;
+    z-index: 20;
+}
+
+/* When logged in, hide the absolute positioning */
+#loginSection.hidden {
+    position: relative;
+    background: transparent;
+}
+
+/* Sidebar transitions */
+#sidebar {
+    transition: transform 0.3s ease;
+}
+
+/* All buttons border-radius */
+button, 
+.category-filter-btn,
+#sidebarAddNoteBtn,
+#mobileAddNoteBtn,
+#addNoteBtn,
+#cancelNoteBtn,
+#pinNoteBtn,
+#loginBtn,
+#signupBtn,
+#logoutBtn,
+#modalDelete,
+#modalSave,
+#closeModal,
+#addChecklistBtn {
+    border-radius: 2rem !important;
+}

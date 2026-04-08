@@ -482,11 +482,17 @@ function subscribeToNotes(userId) {
 function renderAuthUI(user) {
     const sidebar = document.getElementById('sidebar');
     const mobileHeader = document.getElementById('mobileHeader');
+    const mainContent = document.getElementById('mainContent');
     
     if (user) {
         // Show sidebar and mobile header when logged in
-        sidebar.classList.remove('hidden');
-        if (mobileHeader) mobileHeader.classList.remove('hidden');
+        if (sidebar) {
+            sidebar.classList.remove('hidden');
+            sidebar.classList.add('md:flex');
+        }
+        if (mobileHeader) {
+            mobileHeader.classList.remove('hidden');
+        }
         
         authContainer.innerHTML = `
             <div class="space-y-4">
@@ -524,15 +530,15 @@ function renderAuthUI(user) {
         lucide.createIcons();
     } else {
         // Hide sidebar and mobile header when logged out
-        sidebar.classList.add('hidden');
-        if (mobileHeader) mobileHeader.classList.add('hidden');
+        if (sidebar) {
+            sidebar.classList.add('hidden');
+            sidebar.classList.remove('md:flex');
+        }
+        if (mobileHeader) {
+            mobileHeader.classList.add('hidden');
+        }
         
-        authContainer.innerHTML = `
-            <button id="showLoginBtn" class="w-full flex items-center justify-center gap-2 text-sm text-gray-600 px-3 py-2 rounded-[2rem] hover:bg-gray-50 transition-colors">
-                <i data-lucide="log-in" class="w-4 h-4"></i>
-                Sign in
-            </button>
-        `;
+        authContainer.innerHTML = '';
         
         newNoteSection.classList.add('hidden');
         notesGrid.classList.add('hidden');
@@ -540,14 +546,10 @@ function renderAuthUI(user) {
         
         if (unsubscribeNotes) unsubscribeNotes();
         
-        const showLoginBtn = document.getElementById('showLoginBtn');
-        if (showLoginBtn) {
-            showLoginBtn.addEventListener('click', () => loginSection.scrollIntoView({ behavior: 'smooth' }));
-        }
-        
         lucide.createIcons();
     }
 }
+
 // Event Listeners
 addNoteBtn.addEventListener('click', addNewNote);
 closeModal.addEventListener('click', closeNoteModal);

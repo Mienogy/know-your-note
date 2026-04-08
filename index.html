@@ -26,8 +26,8 @@
         <!-- Sidebar Overlay -->
         <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-30 hidden md:hidden" onclick="closeSidebarOnMobile()"></div>
         
-        <!-- Sidebar - Hidden when not logged in -->
-        <aside id="sidebar" class="w-64 bg-white border-r border-gray-200 flex flex-col fixed inset-y-0 left-0 z-40 -translate-x-full md:relative md:flex hidden">
+        <!-- Sidebar - Hidden by default, shown when logged in -->
+        <aside id="sidebar" class="hidden md:flex w-64 bg-white border-r border-gray-200 flex-col fixed inset-y-0 left-0 z-40">
             <div class="p-4 border-b border-gray-100 flex items-center justify-between">
                 <div class="flex items-center gap-2">
                     <i data-lucide="lightbulb" class="w-6 h-6 text-gray-700"></i>
@@ -82,9 +82,9 @@
         </aside>
         
         <!-- Main Content -->
-        <main class="flex-1 overflow-y-auto">
+        <main id="mainContent" class="flex-1 overflow-y-auto">
             
-            <!-- Mobile Header - Hidden when not logged in -->
+            <!-- Mobile Header - Hidden by default, shown when logged in -->
             <div id="mobileHeader" class="md:hidden bg-white border-b border-gray-200 p-4 flex justify-between items-center sticky top-0 z-10 hidden">
                 <div class="flex items-center gap-2">
                     <button id="menuBtn" class="p-1 hover:bg-gray-100 rounded-full">
@@ -163,8 +163,8 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5"></div>
             </div>
             
-            <!-- Login Section -->
-            <div id="loginSection" class="flex items-center justify-center min-h-screen px-4">
+            <!-- Login Section - Full screen centered -->
+            <div id="loginSection" class="w-full h-full flex items-center justify-center px-4" style="min-height: 100vh;">
                 <div class="bg-white rounded-2xl shadow border border-gray-200 w-full max-w-md">
                     <div class="p-8">
                         <div class="text-center mb-6">
