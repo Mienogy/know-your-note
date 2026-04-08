@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generate App Icons - Know Your Note</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f3f4f6;
+            padding: 40px;
+            text-align: center;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h1 { color: #1f2937; margin-bottom: 8px; }
+        p { color: #6b7280; margin-bottom: 32px; }
+        .icon-preview {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 32px;
+            padding: 20px;
+            background: #f9fafb;
+            border-radius: 12px;
+        }
+        .icon-item {
+            text-align: center;
+        }
+        .icon-item canvas {
+            border-radius: 20%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .icon-item p {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+        button {
+            background: #1f2937;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 9999px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            margin: 8px;
+        }
+        button:hover {
+            background: #374151;
+        }
+        .download-all {
+            background: #f4b942;
+            color: #1f2937;
+        }
+        .download-all:hover {
+            background: #e6a82e;
+        }
+        .note {
+            margin-top: 24px;
+            padding: 16px;
+            background: #fef3c7;
+            border-radius: 12px;
+            font-size: 14px;
+            color: #92400e;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 Know Your Note</h1>
+        <p>Generate app icons for installation</p>
+        
+        <div class="icon-preview" id="iconPreview"></div>
+        
+        <div>
+            <button id="downloadAllBtn" class="download-all">📦 Download All Icons (ZIP)</button>
+            <button id="downloadManifestBtn">📄 Download manifest.json</button>
+        </div>
+        
+        <div class="note">
+            💡 <strong>How to use:</strong><br>
+            1. Click "Download All Icons" to get all icon sizes<br>
+            2. Create an <strong>/icons/</strong> folder in your project<br>
+            3. Extract the icons into the /icons/ folder<br>
+            4. Make sure your manifest.json points to the correct paths
+        </div>
+    </div>
+
+    <script>
+        const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+        const icons = {};
+
+        // Draw the icon on canvas
+        function drawIcon(size) {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            
+            // Background
+            ctx.fillStyle = '#1f2937';
+            ctx.beginPath();
+            ctx.roundRect(0, 0, size, size, size * 0.22);
+            ctx.fill();
+            
+            // Glow effect
+            ctx.fillStyle = '#f4b942';
+            ctx.globalAlpha = 0.15;
+            ctx.beginPath();
+            ctx.arc(size/2, size * 0.43, size * 0.23, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 0.25;
+            ctx.beginPath();
+            ctx.arc(size/2, size * 0.43, size * 0.15, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+            
+            // Lightbulb body
+            ctx.fillStyle = '#f4b942';
+            const bulbW = size * 0.28;
+            const bulbH = size * 0.38;
+            const bulbX = size/2 - bulbW/2;
+            const bulbY = size * 0.23;
+            
+            ctx.beginPath();
+            ctx.ellipse(size/2, bulbY + bulbH/2, bulbW/2, bulbH/2, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Lightbulb top highlight
+            ctx.fillStyle = '#fef08a';
+            ctx.globalAlpha = 0.5;
+            ctx.beginPath();
+            ctx.ellipse(size/2, bulbY + bulbH * 0.35, bulbW * 0.35, bulbH * 0.25, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+            
+            // Lightbulb base
+            ctx.fillStyle = '#d1d5db';
+            ctx.fillRect(size/2 - size*0.045, size*0.61, size*0.09, size*0.03);
+            ctx.fillStyle = '#9ca3af';
+            ctx.fillRect(size/2 - size*0.035, size*0.64, size*0.07, size*0.05);
+            
+            // Light rays
+            ctx.strokeStyle = '#f4b942';
+            ctx.lineWidth = size * 0.008;
+            ctx.lineCap = 'round';
+            
+            const rays = [
+                { x: size/2, y: size*0.12, angle: 'top' },
+                { x: size*0.35, y: size*0.18, angle: 'top-left' },
+                { x: size*0.65, y: size*0.18, angle: 'top-right' }
+            ];
+            
+            rays.forEach(ray => {
+                ctx.beginPath();
+                ctx.moveTo(ray.x, ray.y);
+                ctx.lineTo(ray.x, ray.y - size*0.04);
+                ctx.stroke();
+            });
+            
+            // Note lines decoration
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = size * 0.006;
+            ctx.globalAlpha = 0.3;
+            
+            const lineY = [size*0.52, size*0.58, size*0.64];
+            lineY.forEach(y => {
+                ctx.beginPath();
+                ctx.moveTo(size*0.4, y);
+                ctx.lineTo(size*0.6, y);
+                ctx.stroke();
+            });
+            ctx.globalAlpha = 1;
+            
+            return canvas;
+        }
+
+        // Helper for rounded rectangle
+        CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+            if (w < 2 * r) r = w / 2;
+            if (h < 2 * r) r = h / 2;
+            this.moveTo(x+r, y);
+            this.lineTo(x+w-r, y);
+            this.quadraticCurveTo(x+w, y, x+w, y+r);
+            this.lineTo(x+w, y+h-r);
+            this.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+            this.lineTo(x+r, y+h);
+            this.quadraticCurveTo(x, y+h, x, y+h-r);
+            this.lineTo(x, y+r);
+            this.quadraticCurveTo(x, y, x+r, y);
+            return this;
+        };
+
+        // Generate and display all icons
+        function generateIcons() {
+            const preview = document.getElementById('iconPreview');
+            preview.innerHTML = '';
+            
+            sizes.forEach(size => {
+                const canvas = drawIcon(size);
+                icons[size] = canvas;
+                
+                const div = document.createElement('div');
+                div.className = 'icon-item';
+                div.appendChild(canvas);
+                const p = document.createElement('p');
+                p.textContent = `${size}x${size}`;
+                div.appendChild(p);
+                preview.appendChild(div);
+            });
+        }
+
+        // Download single icon
+        function downloadIcon(size) {
+            const canvas = icons[size];
+            if (!canvas) return;
+            
+            const link = document.createElement('a');
+            link.download = `icon-${size}x${size}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+        // Download all icons as ZIP
+        async function downloadAllIcons() {
+            const JSZip = await import('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+            const zip = new JSZip.default();
+            
+            for (const [size, canvas] of Object.entries(icons)) {
+                const dataURL = canvas.toDataURL();
+                const base64Data = dataURL.split(',')[1];
+                zip.file(`icon-${size}x${size}.png`, base64Data, { base64: true });
+            }
+            
+            const content = await zip.generateAsync({ type: 'blob' });
+            const link = document.createElement('a');
+            link.download = 'know-your-note-icons.zip';
+            link.href = URL.createObjectURL(content);
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
+
+        // Download manifest.json
+        function downloadManifest() {
+            const manifest = {
+                name: "Know Your Note",
+                short_name: "KnowNote",
+                description: "A simple and elegant note-taking app with cloud sync",
+                start_url: "/",
+                display: "standalone",
+                theme_color: "#1f2937",
+                background_color: "#f3f4f6",
+                orientation: "portrait-primary",
+                icons: sizes.map(size => ({
+                    src: `/icons/icon-${size}x${size}.png`,
+                    sizes: `${size}x${size}`,
+                    type: "image/png",
+                    purpose: "any maskable"
+                }))
+            };
+            
+            const blob = new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' });
+            const link = document.createElement('a');
+            link.download = 'manifest.json';
+            link.href = URL.createObjectURL(blob);
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
+
+        // Event listeners
+        document.getElementById('downloadAllBtn').addEventListener('click', downloadAllIcons);
+        document.getElementById('downloadManifestBtn').addEventListener('click', downloadManifest);
+        
+        // Generate icons on load
+        generateIcons();
+    </script>
+    
+    <!-- Load JSZip from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</body>
+</html>
