@@ -40,6 +40,7 @@ const closeModal = document.getElementById('closeModal');
 const modalDelete = document.getElementById('modalDelete');
 const modalSave = document.getElementById('modalSave');
 const mainContent = document.getElementById('mainContent');
+const desktopHeader = document.getElementById('desktopHeader');
 
 // Sidebar Elements
 const sidebar = document.getElementById('sidebar');
@@ -468,6 +469,9 @@ function renderAuthUI(user) {
     const userEmailDisplay = document.getElementById('userEmailDisplay');
     
     if (user) {
+        // User is logged in - show desktop header
+        if (desktopHeader) desktopHeader.classList.remove('hidden');
+        
         if (window.innerWidth >= 768) {
             if (sidebar) sidebar.style.transform = 'translateX(0)';
             if (mainContent) mainContent.classList.add('md:ml-64');
@@ -514,6 +518,9 @@ function renderAuthUI(user) {
         if (loginSection) loginSection.classList.add('hidden');
         subscribeToNotes(user.uid);
     } else {
+        // User is logged out - hide desktop header
+        if (desktopHeader) desktopHeader.classList.add('hidden');
+        
         if (sidebar) sidebar.style.transform = 'translateX(-100%)';
         if (mainContent) mainContent.classList.remove('md:ml-64');
         
