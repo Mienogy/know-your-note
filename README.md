@@ -1,2 +1,2 @@
 # know-your-note
-A personal taking down notes just.
+A personal taking down notes.
