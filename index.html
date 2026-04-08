@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Know Your Note</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -19,103 +20,112 @@
     <!-- Toast Container -->
     <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col gap-2"></div>
 </head>
+
 <body class="bg-gray-100">
-    
-    <!-- Mobile Menu Toggle -->
-    <button id="mobileMenuToggle" class="md:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-full shadow-md">
+
+    <!-- Mobile Menu Toggle - Only visible on mobile when logged in -->
+    <button id="mobileMenuToggle" class="md:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-full shadow-md hidden">
         <i data-lucide="menu" class="w-5 h-5 text-gray-700"></i>
     </button>
-    
+
     <!-- Sidebar Overlay for Mobile -->
     <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 hidden"></div>
-    
+
     <!-- Sidebar -->
-    <aside id="sidebar" class="fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 z-40 transform transition-transform duration-300 md:translate-x-0 -translate-x-full">
+    <aside id="sidebar"
+        class="fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 z-50 transform transition-transform duration-300 -translate-x-full">
         <div class="flex flex-col h-full">
             <div class="p-4 border-b border-gray-100 flex items-center justify-between">
                 <div class="flex items-center gap-2">
                     <i data-lucide="lightbulb" class="w-6 h-6 text-gray-700"></i>
                     <h1 class="text-lg font-medium text-gray-700">Know Your Note</h1>
                 </div>
-                <button id="closeSidebarBtn" class="md:hidden p-1 hover:bg-gray-100 rounded-full">
+                <button id="closeSidebarBtn" class="p-1 hover:bg-gray-100 rounded-full">
                     <i data-lucide="x" class="w-5 h-5 text-gray-500"></i>
                 </button>
             </div>
-            
+
             <div class="p-4">
-                <button id="sidebarAddNoteBtn" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-800 text-white rounded-full hover:bg-gray-900 transition-colors">
+                <button id="sidebarAddNoteBtn"
+                    class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-800 text-white rounded-full hover:bg-gray-900 transition-colors">
                     <i data-lucide="plus" class="w-4 h-4"></i>
                     <span class="font-medium">Add Note</span>
                 </button>
             </div>
-            
+
             <div class="flex-1 px-4 py-2 overflow-y-auto">
                 <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3 px-3">Categories</p>
                 <nav class="space-y-1">
-                    <button data-category="all" class="category-filter-btn w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
+                    <button data-category="all"
+                        class="category-filter-btn w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
                         <i data-lucide="layers" class="w-4 h-4"></i>
                         <span>All Notes</span>
                     </button>
-                    <button data-category="personal" class="category-filter-btn w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
+                    <button data-category="personal"
+                        class="category-filter-btn w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
                         <i data-lucide="user" class="w-4 h-4"></i>
                         <span>Personal</span>
                     </button>
-                    <button data-category="work" class="category-filter-btn w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
+                    <button data-category="work"
+                        class="category-filter-btn w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
                         <i data-lucide="briefcase" class="w-4 h-4"></i>
                         <span>Work</span>
                     </button>
-                    <button data-category="ideas" class="category-filter-btn w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
+                    <button data-category="ideas"
+                        class="category-filter-btn w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
                         <i data-lucide="lightbulb" class="w-4 h-4"></i>
                         <span>Ideas</span>
                     </button>
-                    <button data-category="tasks" class="category-filter-btn w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
+                    <button data-category="tasks"
+                        class="category-filter-btn w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
                         <i data-lucide="check-square" class="w-4 h-4"></i>
                         <span>Tasks</span>
                     </button>
-                    <button data-category="important" class="category-filter-btn w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
+                    <button data-category="important"
+                        class="category-filter-btn w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
                         <i data-lucide="star" class="w-4 h-4"></i>
                         <span>Important</span>
                     </button>
                 </nav>
             </div>
-            
+
             <div class="p-4 border-t border-gray-100" id="authContainer"></div>
         </div>
     </aside>
-    
+
     <!-- Main Content -->
-    <main id="mainContent" class="flex-1 overflow-y-auto md:ml-64">
-        
-        <!-- Mobile Header -->
-        <div id="mobileHeader" class="md:hidden bg-white border-b border-gray-200 p-4 flex justify-between items-center sticky top-0 z-10">
-            <button id="mobileMenuBtn" class="p-1 hover:bg-gray-100 rounded-full">
+    <main id="mainContent" class="flex-1 overflow-y-auto">
+        <!-- Mobile Header - Only visible on mobile when logged in -->
+        <div id="mobileHeader"
+            class="md:hidden bg-white border-b border-gray-200 px-4 py-3 flex justify-between items-center sticky top-0 z-30 hidden">
+            <button id="mobileMenuBtn" class="p-2 hover:bg-gray-100 rounded-full">
                 <i data-lucide="menu" class="w-5 h-5 text-gray-700"></i>
             </button>
             <div class="flex items-center gap-2">
                 <i data-lucide="lightbulb" class="w-5 h-5 text-gray-700"></i>
                 <h1 class="text-base font-medium text-gray-700">Know Your Note</h1>
             </div>
-            <button id="mobileAddNoteBtn" class="p-2 bg-gray-800 text-white rounded-full">
+            <button id="mobileAddNoteBtn" class="p-2 bg-gray-800 text-white rounded-full shadow-md">
                 <i data-lucide="plus" class="w-5 h-5"></i>
             </button>
         </div>
-        
+
         <!-- Desktop Header -->
         <div class="hidden md:block bg-white border-b border-gray-200 px-8 py-4">
             <div class="flex justify-between items-center">
-                <h1 class="text-2xl font-semibold text-gray-800">Your Notes</h1>
-                <button id="desktopAddNoteBtn" class="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-full hover:bg-gray-900 transition-colors">
-                    <i data-lucide="plus" class="w-4 h-4"></i>
-                    Add Note
-                </button>
+                <div>
+                    <h1 class="text-2xl font-semibold text-gray-800" id="welcomeGreeting">Your Notes</h1>
+                    <p class="text-sm text-gray-500 mt-1" id="userEmailDisplay"></p>
+                </div>
             </div>
         </div>
-        
+
         <!-- Notes Grid -->
         <div id="notesGrid" class="hidden px-4 md:px-8 py-6">
-            <div id="notesGridContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"></div>
+            <div id="notesGridContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            </div>
         </div>
-        
+
         <!-- Login Section -->
         <div id="loginSection" class="flex items-center justify-center min-h-screen px-4">
             <div class="bg-white rounded-2xl shadow border border-gray-200 w-full max-w-md">
@@ -127,23 +137,27 @@
                     </div>
                     <div class="space-y-4">
                         <div class="relative">
-                            <i data-lucide="mail" class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                            <input type="email" id="loginEmail" 
-                                   class="w-full px-4 py-2.5 pl-12 border border-gray-200 rounded-full focus:border-gray-800 focus:outline-none"
-                                   placeholder="Email address">
+                            <i data-lucide="mail"
+                                class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            <input type="email" id="loginEmail"
+                                class="w-full px-4 py-2.5 pl-12 border border-gray-200 rounded-full focus:border-gray-800 focus:outline-none"
+                                placeholder="Email address">
                         </div>
                         <div class="relative">
-                            <i data-lucide="lock" class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                            <input type="password" id="loginPassword" 
-                                   class="w-full px-4 py-2.5 pl-12 border border-gray-200 rounded-full focus:border-gray-800 focus:outline-none"
-                                   placeholder="Password">
+                            <i data-lucide="lock"
+                                class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            <input type="password" id="loginPassword"
+                                class="w-full px-4 py-2.5 pl-12 border border-gray-200 rounded-full focus:border-gray-800 focus:outline-none"
+                                placeholder="Password">
                         </div>
                         <div class="flex gap-3">
-                            <button id="loginBtn" class="flex-1 bg-gray-800 text-white py-2.5 rounded-full hover:bg-gray-900 transition-colors font-medium">
-                                Sign in
+                            <button id="loginBtn"
+                                class="flex-1 bg-gray-800 text-white py-2.5 rounded-full hover:bg-gray-900 transition-colors font-medium">
+                                Login
                             </button>
-                            <button id="signupBtn" class="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-full hover:bg-gray-50 transition-colors font-medium">
-                                Sign up
+                            <button id="signupBtn"
+                                class="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-full hover:bg-gray-50 transition-colors font-medium">
+                                Register
                             </button>
                         </div>
                     </div>
@@ -151,85 +165,132 @@
             </div>
         </div>
     </main>
-    
+
     <!-- Add Note Modal -->
     <div id="addNoteModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div class="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex justify-between items-center">
                 <h3 class="text-lg font-semibold text-gray-800">Create New Note</h3>
-                <button id="closeAddNoteModal" class="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100">
+                <button id="closeAddNoteModal"
+                    class="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
             <div class="p-6">
-                <input type="text" id="modalNoteTitle" class="w-full text-xl font-medium outline-none bg-transparent mb-4 border-b border-gray-200 pb-2 focus:border-gray-800" placeholder="Title">
-                
+                <input type="text" id="modalNoteTitle"
+                    class="w-full text-xl font-medium outline-none bg-transparent mb-4 border-b border-gray-200 pb-2 focus:border-gray-800"
+                    placeholder="Title">
+
                 <div id="modalToolbar" class="mb-3 flex flex-wrap gap-1 border-b border-gray-100 pb-2">
-                    <button type="button" class="ql-bold p-1.5 rounded-full hover:bg-gray-100"><i data-lucide="bold" class="w-4 h-4"></i></button>
-                    <button type="button" class="ql-italic p-1.5 rounded-full hover:bg-gray-100"><i data-lucide="italic" class="w-4 h-4"></i></button>
-                    <button type="button" class="ql-underline p-1.5 rounded-full hover:bg-gray-100"><i data-lucide="underline" class="w-4 h-4"></i></button>
-                    <button type="button" class="ql-align p-1.5 rounded-full hover:bg-gray-100"><i data-lucide="align-left" class="w-4 h-4"></i></button>
-                    <button type="button" class="ql-list p-1.5 rounded-full hover:bg-gray-100" value="bullet"><i data-lucide="list" class="w-4 h-4"></i></button>
-                    <button type="button" class="ql-link p-1.5 rounded-full hover:bg-gray-100"><i data-lucide="link" class="w-4 h-4"></i></button>
-                    <button type="button" class="ql-image p-1.5 rounded-full hover:bg-gray-100"><i data-lucide="image" class="w-4 h-4"></i></button>
+                    <button type="button" class="ql-bold p-2 rounded-full hover:bg-gray-100 transition-colors"
+                        title="Bold">
+                        <i data-lucide="bold" class="w-4 h-4"></i>
+                    </button>
+                    <button type="button" class="ql-italic p-2 rounded-full hover:bg-gray-100 transition-colors"
+                        title="Italic">
+                        <i data-lucide="italic" class="w-4 h-4"></i>
+                    </button>
+                    <button type="button" class="ql-underline p-2 rounded-full hover:bg-gray-100 transition-colors"
+                        title="Underline">
+                        <i data-lucide="underline" class="w-4 h-4"></i>
+                    </button>
+                    <button type="button" class="ql-align p-2 rounded-full hover:bg-gray-100 transition-colors"
+                        title="Align Left">
+                        <i data-lucide="align-left" class="w-4 h-4"></i>
+                    </button>
+                    <button type="button" class="ql-list p-2 rounded-full hover:bg-gray-100 transition-colors"
+                        value="bullet" title="Bullet List">
+                        <i data-lucide="list" class="w-4 h-4"></i>
+                    </button>
+                    <button type="button" class="ql-link p-2 rounded-full hover:bg-gray-100 transition-colors"
+                        title="Insert Link">
+                        <i data-lucide="link" class="w-4 h-4"></i>
+                    </button>
                 </div>
                 <div id="modalEditorContainer" class="bg-gray-50 rounded-xl p-3" style="min-height: 200px;"></div>
-                
-                <div class="mt-4">
-                    <button type="button" id="modalAddChecklistBtn" class="text-sm text-gray-400 hover:text-gray-600 flex items-center gap-2 transition-colors rounded-full px-3 py-1.5 hover:bg-gray-100">
-                        <i data-lucide="check-square" class="w-4 h-4"></i>
-                        Add checklist
-                    </button>
-                    <div id="modalChecklistContainer" class="mt-3 space-y-2"></div>
-                </div>
-                
+
+                <button type="button" id="modalAddChecklistBtn"
+                    class="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors rounded-full px-3 py-2 hover:bg-gray-100">
+                    <i data-lucide="check-square" class="w-4 h-4"></i>
+                    Add checklist
+                </button>
+
                 <div class="flex flex-wrap gap-3 mt-5 pt-4 border-t border-gray-100">
-                    <select id="modalNoteCategory" class="text-sm border border-gray-200 bg-gray-50 rounded-full px-3 py-2">
-                        <option value="personal">Personal</option>
-                        <option value="work">Work</option>
-                        <option value="ideas">Ideas</option>
-                        <option value="tasks">Tasks</option>
+                    <select id="modalNoteCategory"
+                        class="text-sm border border-gray-200 bg-gray-50 rounded-full px-3 py-2">
+                        <option value="personal">personal</option>
+                        <option value="work">work</option>
+                        <option value="ideas">ideas</option>
+                        <option value="tasks">tasks</option>
                         <option value="important">Important</option>
                     </select>
-                    <input type="text" id="modalNoteLabels" placeholder="Labels (comma separated)" class="text-sm border border-gray-200 bg-gray-50 rounded-full px-3 py-2 flex-1 min-w-[150px]">
                 </div>
             </div>
             <div class="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 flex justify-between">
-                <button type="button" id="modalPinNoteBtn" class="text-sm text-gray-400 hover:text-gray-600 px-3 py-1.5 rounded-full hover:bg-gray-100 transition-colors flex items-center gap-1">
+                <button type="button" id="modalPinNoteBtn"
+                    class="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-600 px-3 py-2 rounded-full hover:bg-gray-100 transition-colors">
                     <i data-lucide="pin" class="w-4 h-4"></i>
                     Pin
                 </button>
                 <div class="flex gap-2">
-                    <button type="button" id="cancelModalNoteBtn" class="text-sm text-gray-500 px-4 py-1.5 rounded-full hover:bg-gray-100 transition-colors">Cancel</button>
-                    <button type="button" id="saveModalNoteBtn" class="text-sm bg-gray-800 text-white px-5 py-1.5 rounded-full hover:bg-gray-900 transition-colors">Save Note</button>
+                    <button type="button" id="cancelModalNoteBtn"
+                        class="flex items-center gap-2 text-sm text-gray-500 px-4 py-2 rounded-full hover:bg-gray-100 transition-colors">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                        Cancel
+                    </button>
+                    <button type="button" id="saveModalNoteBtn"
+                        class="flex items-center gap-2 text-sm bg-gray-800 text-white px-4 py-2 rounded-full hover:bg-gray-900 transition-colors">
+                        <i data-lucide="save" class="w-4 h-4"></i>
+                        Save Note
+                    </button>
                 </div>
             </div>
         </div>
     </div>
-    
+
     <!-- Note View Modal -->
     <div id="noteModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
         <div class="bg-white rounded-2xl shadow-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <div class="p-6">
                 <div class="flex justify-between items-start mb-4">
-                    <input type="text" id="modalTitle" class="text-2xl font-medium outline-none flex-1 bg-transparent" placeholder="Title">
-                    <button id="closeModal" class="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100">
+                    <div class="flex items-center gap-3 flex-1">
+                        <i data-lucide="file-text" class="w-6 h-6 text-gray-500 mt-1 flex-shrink-0"></i>
+                        <input type="text" id="modalTitle"
+                            class="text-2xl font-medium outline-none flex-1 bg-transparent border-b border-transparent focus:border-gray-300 pb-1"
+                            placeholder="Title">
+                    </div>
+                    <button id="closeModal"
+                        class="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 flex-shrink-0">
                         <i data-lucide="x" class="w-5 h-5"></i>
                     </button>
                 </div>
-                <div id="modalContent" class="prose max-w-none mb-4"></div>
-                <div id="modalChecklist" class="mb-4 p-3 bg-gray-50 rounded-xl"></div>
+                <div id="modalContent"
+                    class="prose max-w-none mb-4 p-2 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-300"
+                    contenteditable="true"></div>
+                <button type="button" id="modalAddChecklistBtn"
+                    class="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors rounded-full px-3 py-2 hover:bg-gray-100">
+                    <i data-lucide="check-square" class="w-4 h-4"></i>
+                    Add checklist
+                </button>
                 <div class="flex flex-wrap gap-2 mb-4 pt-3 border-t border-gray-100">
                     <span id="modalCategory" class="text-xs bg-gray-100 px-2 py-1 rounded-full"></span>
-                    <span id="modalLabels" class="text-xs bg-gray-100 px-2 py-1 rounded-full"></span>
                 </div>
                 <div class="flex justify-end gap-2 pt-4 border-t border-gray-100">
-                    <button id="modalDelete" class="text-sm text-red-500 hover:bg-red-50 px-4 py-1.5 rounded-full">Delete</button>
-                    <button id="modalSave" class="text-sm bg-gray-800 text-white px-4 py-1.5 rounded-full hover:bg-gray-900">Save Changes</button>
+                    <button id="modalDelete"
+                        class="flex items-center gap-2 text-sm text-red-500 hover:bg-red-50 px-4 py-2 rounded-full transition-colors">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        Delete
+                    </button>
+                    <button id="modalSave"
+                        class="flex items-center gap-2 text-sm bg-gray-800 text-white px-4 py-2 rounded-full opacity-50 cursor-not-allowed transition-colors">
+                        <i data-lucide="save" class="w-4 h-4"></i>
+                        Save Changes
+                    </button>
                 </div>
             </div>
         </div>
     </div>
-    
+
 </body>
+
 </html>
