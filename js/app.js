@@ -79,6 +79,7 @@ let unsubscribeNotes = null;
 // Track original values for edit detection
 let originalTitle = "";
 let originalContent = "";
+let originalContentHTML = "";
 
 // Helper Functions
 function getUserGreeting(email) {
@@ -124,14 +125,14 @@ function addModalChecklistItem(text = "", completed = false) {
   const itemDiv = document.createElement("div");
   itemDiv.className = "checklist-item";
   itemDiv.innerHTML = `
-        <input type="checkbox" ${
-          completed ? "checked" : ""
-        } class="checklist-checkbox">
-        <input type="text" value="${escapeHtml(
-          text
-        )}" placeholder="Checklist item..." class="checklist-text">
-        <button type="button" class="remove-checklist">✕</button>
-    `;
+    <input type="checkbox" ${
+      completed ? "checked" : ""
+    } class="checklist-checkbox">
+    <input type="text" value="${escapeHtml(
+      text
+    )}" placeholder="Checklist item..." class="checklist-text">
+    <button type="button" class="remove-checklist">✕</button>
+  `;
   const checkbox = itemDiv.querySelector(".checklist-checkbox");
   const textInput = itemDiv.querySelector(".checklist-text");
   const removeBtn = itemDiv.querySelector(".remove-checklist");
@@ -242,6 +243,7 @@ function openNoteModal(note) {
   currentNoteId = note.id;
   originalTitle = note.title || "";
   originalContent = note.content || "";
+  originalContentHTML = note.content || "";
 
   if (modalTitle) {
     modalTitle.value = originalTitle;
@@ -270,15 +272,15 @@ function openNoteModal(note) {
         '<p class="font-medium text-sm mb-2">Checklist:</p>';
       note.checklist.forEach((item) => {
         modalChecklist.innerHTML += `
-                    <div class="flex items-center gap-2 py-1">
-                        <input type="checkbox" ${
-                          item.completed ? "checked" : ""
-                        } class="w-4 h-4" style="accent-color: #1f2937">
-                        <span class="${
-                          item.completed ? "line-through text-gray-400" : ""
-                        } text-sm">${escapeHtml(item.text)}</span>
-                    </div>
-                `;
+          <div class="flex items-center gap-2 py-1">
+            <input type="checkbox" ${
+              item.completed ? "checked" : ""
+            } class="w-4 h-4" style="accent-color: #1f2937">
+            <span class="${
+              item.completed ? "line-through text-gray-400" : ""
+            } text-sm">${escapeHtml(item.text)}</span>
+          </div>
+        `;
       });
     } else {
       modalChecklist.innerHTML = "";
@@ -290,35 +292,32 @@ function openNoteModal(note) {
     viewNoteModal.classList.add("flex");
   }
 
-  // Setup formatting toolbar for view modal
   setupViewModalFormatting();
 
   if (typeof lucide !== "undefined") lucide.createIcons();
 }
 
+// Check if content has changed (ignoring whitespace)
 function hasContentChanged() {
   const currentTitle = modalTitle ? modalTitle.value.trim() : "";
-  const currentContent = modalContent ? modalContent.innerText.trim() : "";
+  const currentContentHTML = modalContent ? modalContent.innerHTML : "";
+  const currentContentText = modalContent ? modalContent.innerText.trim() : "";
+
   const originalTitleTrimmed = originalTitle.trim();
-  const originalContentTrimmed = originalContent.trim();
+  const originalContentTextTrimmed = originalContent.trim();
+  const originalContentHTMLTrimmed = originalContentHTML.trim();
 
   return (
     currentTitle !== originalTitleTrimmed ||
-    currentContent !== originalContentTrimmed
+    currentContentText !== originalContentTextTrimmed ||
+    currentContentHTML !== originalContentHTMLTrimmed
   );
 }
 
+// Enable save button when changes are detected
 function checkAndEnableSave() {
   if (!modalSave) return;
-  const currentTitle = modalTitle ? modalTitle.value.trim() : "";
-  const currentContent = modalContent ? modalContent.innerText.trim() : "";
-  const originalTitleTrimmed = originalTitle.trim();
-  const originalContentTrimmed = originalContent.trim();
-
-  if (
-    currentTitle !== originalTitleTrimmed ||
-    currentContent !== originalContentTrimmed
-  ) {
+  if (hasContentChanged()) {
     modalSave.disabled = false;
     modalSave.classList.remove("opacity-50", "cursor-not-allowed");
     modalSave.classList.add("hover:bg-gray-900");
@@ -328,6 +327,7 @@ function checkAndEnableSave() {
     modalSave.classList.remove("hover:bg-gray-900");
   }
 }
+
 async function updateNote() {
   if (!currentNoteId) return;
 
@@ -443,33 +443,33 @@ function subscribeToNotes(userId) {
       }
 
       card.innerHTML = `
-                <div class="flex justify-between items-start mb-3">
-                    <div class="flex items-start gap-2 flex-1">
-                        ${
-                          note.pinned
-                            ? '<i data-lucide="pin" class="w-4 h-4 text-amber-500 rotate-45 flex-shrink-0 mt-0.5"></i>'
-                            : ""
-                        }
-                        <h3 class="font-semibold text-gray-900 text-lg break-words whitespace-normal leading-tight" style="word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;">${
-                          escapeHtml(note.title) || "Untitled"
-                        }</h3>
-                    </div>
-                    <button class="delete-note-btn text-gray-400 hover:text-red-500 transition-colors flex-shrink-0 ml-2">
-                        <i data-lucide="trash-2" class="w-4 h-4"></i>
-                    </button>
-                </div>
-                <p class="text-sm text-gray-600 line-clamp-3 mb-4">${escapeHtml(
-                  contentPreview
-                )}</p>
-                <div class="flex items-center justify-between">
-                    <span class="category-badge category-${note.category}">${
+        <div class="flex justify-between items-start mb-3">
+          <div class="flex items-start gap-2 flex-1">
+            ${
+              note.pinned
+                ? '<i data-lucide="pin" class="w-4 h-4 text-amber-500 rotate-45 flex-shrink-0 mt-0.5"></i>'
+                : ""
+            }
+            <h3 class="font-semibold text-gray-900 text-lg break-words whitespace-normal leading-tight">${
+              escapeHtml(note.title) || "Untitled"
+            }</h3>
+          </div>
+          <button class="delete-note-btn text-gray-400 hover:text-red-500 transition-colors flex-shrink-0 ml-2">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+          </button>
+        </div>
+        <p class="text-sm text-gray-600 line-clamp-3 mb-4">${escapeHtml(
+          contentPreview
+        )}</p>
+        <div class="flex items-center justify-between">
+          <span class="category-badge category-${note.category}">${
         note.category
       }</span>
-                    <span class="text-xs text-gray-400">${formatDate(
-                      note.updatedAt
-                    )}</span>
-                </div>
-            `;
+          <span class="text-xs text-gray-400">${formatDate(
+            note.updatedAt
+          )}</span>
+        </div>
+      `;
 
       card.addEventListener("click", (e) => {
         if (!e.target.closest(".delete-note-btn")) openNoteModal(note);
@@ -545,7 +545,6 @@ function renderAuthUI(user) {
   const userEmailDisplay = document.getElementById("userEmailDisplay");
 
   if (user) {
-    // User is logged in - show desktop header
     if (desktopHeader) desktopHeader.classList.remove("hidden");
 
     if (window.innerWidth >= 768) {
@@ -566,28 +565,25 @@ function renderAuthUI(user) {
       }
     }
 
-    if (welcomeGreeting) {
+    if (welcomeGreeting)
       welcomeGreeting.textContent = getUserGreeting(user.email);
-    }
-    if (userEmailDisplay) {
-      userEmailDisplay.textContent = user.email;
-    }
+    if (userEmailDisplay) userEmailDisplay.textContent = user.email;
 
     if (authContainer) {
       authContainer.innerHTML = `
-                <div class="text-center mb-3">
-                    <div class="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-2">
-                        <i data-lucide="user" class="w-5 h-5 text-white"></i>
-                    </div>
-                    <p class="text-sm font-medium text-gray-700 truncate">${escapeHtml(
-                      user.email
-                    )}</p>
-                </div>
-                <button id="logoutBtn" class="w-full flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-white px-4 py-2 rounded-full hover:bg-red-500 transition-all border border-gray-200">
-                    <i data-lucide="log-out" class="w-4 h-4"></i>
-                    Sign out
-                </button>
-            `;
+        <div class="text-center mb-3">
+          <div class="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-2">
+            <i data-lucide="user" class="w-5 h-5 text-white"></i>
+          </div>
+          <p class="text-sm font-medium text-gray-700 truncate">${escapeHtml(
+            user.email
+          )}</p>
+        </div>
+        <button id="logoutBtn" class="w-full flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-white px-4 py-2 rounded-full hover:bg-red-500 transition-all border border-gray-200">
+          <i data-lucide="log-out" class="w-4 h-4"></i>
+          Sign out
+        </button>
+      `;
       const logoutBtn = document.getElementById("logoutBtn");
       if (logoutBtn) logoutBtn.addEventListener("click", () => signOut(auth));
     }
@@ -596,7 +592,6 @@ function renderAuthUI(user) {
     if (loginSection) loginSection.classList.add("hidden");
     subscribeToNotes(user.uid);
   } else {
-    // User is logged out - hide desktop header
     if (desktopHeader) desktopHeader.classList.add("hidden");
 
     if (sidebar) sidebar.style.transform = "translateX(-100%)";
@@ -625,7 +620,12 @@ function renderAuthUI(user) {
 // Formatting functions for view modal
 function applyViewFormat(command, value = null) {
   document.execCommand(command, false, value);
-  checkAndEnableSave();
+  setTimeout(() => {
+    checkAndEnableSave();
+    if (modalContent) {
+      originalContentHTML = modalContent.innerHTML;
+    }
+  }, 10);
 }
 
 function setupViewModalFormatting() {
@@ -700,18 +700,25 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
-  // Edit detection
-  if (modalTitle) modalTitle.addEventListener("input", checkAndEnableSave);
+  // Edit detection for modal title and content
+  if (modalTitle) {
+    modalTitle.addEventListener("input", checkAndEnableSave);
+    modalTitle.addEventListener("keyup", checkAndEnableSave);
+  }
+
   if (modalContent) {
     modalContent.addEventListener("input", checkAndEnableSave);
     modalContent.addEventListener("keyup", checkAndEnableSave);
     modalContent.addEventListener("blur", checkAndEnableSave);
+    modalContent.addEventListener("mouseup", checkAndEnableSave);
 
     const contentObserver = new MutationObserver(() => checkAndEnableSave());
     contentObserver.observe(modalContent, {
       childList: true,
       subtree: true,
       characterData: true,
+      attributes: true,
+      attributeFilter: ["style", "class"],
     });
   }
 
