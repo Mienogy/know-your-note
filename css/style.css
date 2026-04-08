@@ -245,3 +245,29 @@ input, select, textarea {
 input:focus, select:focus, textarea:focus {
     outline: none;
 }
+
+/* Add to existing CSS */
+button, .button {
+    border-radius: 2rem !important;
+}
+
+/* Ensure all buttons have 2rem border-radius */
+button, 
+.category-filter-btn,
+#sidebarAddNoteBtn,
+#mobileAddNoteBtn,
+#addNoteBtn,
+#cancelNoteBtn,
+#pinNoteBtn,
+#loginBtn,
+#signupBtn,
+#logoutBtn,
+#modalDelete,
+#modalSave,
+#closeModal,
+#addChecklistBtn,
+.ql-bold, .ql-italic, .ql-underline, .ql-align, .ql-list, .ql-link, .ql-image {
+    border-radius: 2rem !important;
+}
+
+/* Keep the rest of your existing CSS */

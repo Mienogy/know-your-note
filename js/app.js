@@ -480,29 +480,40 @@ function subscribeToNotes(userId) {
 
 // Render Auth UI
 function renderAuthUI(user) {
+    const sidebar = document.getElementById('sidebar');
+    const mobileHeader = document.getElementById('mobileHeader');
+    
     if (user) {
+        // Show sidebar and mobile header when logged in
+        sidebar.classList.remove('hidden');
+        if (mobileHeader) mobileHeader.classList.remove('hidden');
+        
         authContainer.innerHTML = `
             <div class="space-y-4">
-                <div class="text-center p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
-                    <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                <div class="text-center p-3 bg-gray-50 rounded-xl border border-gray-100">
+                    <div class="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-2">
                         <i data-lucide="user" class="w-5 h-5 text-white"></i>
                     </div>
                     <p class="text-sm font-medium text-gray-700 truncate">${escapeHtml(user.email)}</p>
                 </div>
-                <button id="logoutBtn" class="w-full flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-white px-4 py-2.5 rounded-xl hover:bg-gradient-to-r hover:from-red-500 hover:to-red-600 transition-all border border-gray-200 hover:border-red-300 font-medium">
+                <button id="logoutBtn" class="w-full flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-white px-4 py-2.5 rounded-[2rem] hover:bg-red-500 transition-all border border-gray-200 hover:border-red-500 font-medium">
                     <i data-lucide="log-out" class="w-4 h-4"></i>
                     Sign out
                 </button>
             </div>
         `;
-        document.getElementById('logoutBtn')?.addEventListener('click', async () => {
-            try {
-                await signOut(auth);
-                showToast("Signed out successfully", "info");
-            } catch (error) {
-                showToast("Error signing out: " + error.message, "error");
-            }
-        });
+        
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async () => {
+                try {
+                    await signOut(auth);
+                    showToast("Signed out successfully", "info");
+                } catch (error) {
+                    showToast("Error signing out: " + error.message, "error");
+                }
+            });
+        }
         
         newNoteSection.classList.add('hidden');
         notesGrid.classList.remove('hidden');
@@ -512,21 +523,31 @@ function renderAuthUI(user) {
         subscribeToNotes(user.uid);
         lucide.createIcons();
     } else {
+        // Hide sidebar and mobile header when logged out
+        sidebar.classList.add('hidden');
+        if (mobileHeader) mobileHeader.classList.add('hidden');
+        
         authContainer.innerHTML = `
-            <button id="showLoginBtn" class="w-full flex items-center justify-center gap-2 text-sm text-gray-600 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors">
+            <button id="showLoginBtn" class="w-full flex items-center justify-center gap-2 text-sm text-gray-600 px-3 py-2 rounded-[2rem] hover:bg-gray-50 transition-colors">
                 <i data-lucide="log-in" class="w-4 h-4"></i>
                 Sign in
             </button>
         `;
+        
         newNoteSection.classList.add('hidden');
         notesGrid.classList.add('hidden');
         loginSection.classList.remove('hidden');
+        
         if (unsubscribeNotes) unsubscribeNotes();
-        document.getElementById('showLoginBtn')?.addEventListener('click', () => loginSection.scrollIntoView({ behavior: 'smooth' }));
+        
+        const showLoginBtn = document.getElementById('showLoginBtn');
+        if (showLoginBtn) {
+            showLoginBtn.addEventListener('click', () => loginSection.scrollIntoView({ behavior: 'smooth' }));
+        }
+        
         lucide.createIcons();
     }
 }
-
 // Event Listeners
 addNoteBtn.addEventListener('click', addNewNote);
 closeModal.addEventListener('click', closeNoteModal);
