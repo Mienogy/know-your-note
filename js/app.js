@@ -37,18 +37,10 @@ const db = getFirestore(app);
 
 // DOM Elements
 const authContainer = document.getElementById("authContainer");
-const newNoteSection = document.getElementById("newNoteSection");
 const notesGrid = document.getElementById("notesGrid");
 const loginSection = document.getElementById("loginSection");
-const noteTitleInput = document.getElementById("noteTitleInput");
-const noteCategory = document.getElementById("noteCategory");
-const noteLabels = document.getElementById("noteLabels");
-const addNoteBtn = document.getElementById("addNoteBtn");
-const cancelNoteBtn = document.getElementById("cancelNoteBtn");
-const pinNoteBtn = document.getElementById("pinNoteBtn");
-const addChecklistBtn = document.getElementById("addChecklistBtn");
-const checklistContainer = document.getElementById("checklistContainer");
 const modal = document.getElementById("noteModal");
+const addNoteModal = document.getElementById("addNoteModal");
 const modalTitle = document.getElementById("modalTitle");
 const modalContent = document.getElementById("modalContent");
 const modalCategory = document.getElementById("modalCategory");
@@ -57,95 +49,81 @@ const modalChecklist = document.getElementById("modalChecklist");
 const closeModal = document.getElementById("closeModal");
 const modalDelete = document.getElementById("modalDelete");
 const modalSave = document.getElementById("modalSave");
-const sidebarAddNoteBtn = document.getElementById("sidebarAddNoteBtn");
-const mobileAddNoteBtn = document.getElementById("mobileAddNoteBtn");
-const menuBtn = document.getElementById("menuBtn");
-const closeSidebarBtn = document.getElementById("closeSidebarBtn");
 const sidebar = document.getElementById("sidebar");
 const sidebarOverlay = document.getElementById("sidebarOverlay");
+const mobileMenuToggle = document.getElementById("mobileMenuToggle");
+const mobileMenuBtn = document.getElementById("mobileMenuBtn");
+const closeSidebarBtn = document.getElementById("closeSidebarBtn");
+
+// Modal Add Note Elements
+const modalNoteTitle = document.getElementById("modalNoteTitle");
+const modalNoteCategory = document.getElementById("modalNoteCategory");
+const modalNoteLabels = document.getElementById("modalNoteLabels");
+const modalPinNoteBtn = document.getElementById("modalPinNoteBtn");
+const modalAddChecklistBtn = document.getElementById("modalAddChecklistBtn");
+const modalChecklistContainer = document.getElementById(
+  "modalChecklistContainer"
+);
+const closeAddNoteModal = document.getElementById("closeAddNoteModal");
+const cancelModalNoteBtn = document.getElementById("cancelModalNoteBtn");
+const saveModalNoteBtn = document.getElementById("saveModalNoteBtn");
 
 let currentNoteId = null;
 let quill = null;
+let modalQuill = null;
 let currentFilter = "all";
 let currentPinnedStatus = false;
+let modalPinnedStatus = false;
 let checklistItems = [];
-let currentNotes = []; // Store current notes array for modal access
+let modalChecklistItems = [];
+let currentNotes = [];
+let isSaving = false;
 
-// Toast Notification Functions
+// Toast Functions
 function showToast(message, type = "info") {
   const toastContainer = document.getElementById("toastContainer");
   const toast = document.createElement("div");
   toast.className = `toast ${type} p-4 rounded-lg shadow-lg max-w-sm`;
-  toast.innerHTML = `
-        <div class="flex items-center gap-3">
-            <div class="flex-shrink-0">
-                ${getToastIcon(type)}
-            </div>
-            <p class="text-sm font-medium">${message}</p>
-        </div>
-    `;
-
+  toast.innerHTML = `<div class="flex items-center gap-3"><p class="text-sm font-medium">${message}</p></div>`;
   toastContainer.appendChild(toast);
-  lucide.createIcons();
-
-  // Remove toast after animation
-  setTimeout(() => {
-    if (toast.parentNode) {
-      toast.parentNode.removeChild(toast);
-    }
-  }, 3300);
+  setTimeout(() => toast.remove(), 3300);
 }
 
-function getToastIcon(type) {
-  const icons = {
-    success: '<i data-lucide="check-circle" class="w-5 h-5 text-white"></i>',
-    error: '<i data-lucide="alert-circle" class="w-5 h-5 text-white"></i>',
-    warning: '<i data-lucide="alert-triangle" class="w-5 h-5 text-white"></i>',
-    info: '<i data-lucide="info" class="w-5 h-5 text-white"></i>',
-  };
-  return icons[type] || icons.info;
-}
-
-// Initialize Quill
-function initQuill() {
-  if (!quill) {
-    quill = new Quill("#editor-container", {
+// Initialize Quill for Modal
+function initModalQuill() {
+  if (!modalQuill) {
+    modalQuill = new Quill("#modalEditorContainer", {
       theme: "snow",
-      modules: {
-        toolbar: "#toolbar-container",
-      },
+      modules: { toolbar: "#modalToolbar" },
       placeholder: "Write your note here...",
     });
 
-    // Fix image upload
     const imageHandler = () => {
       const input = document.createElement("input");
       input.setAttribute("type", "file");
       input.setAttribute("accept", "image/*");
       input.click();
-      input.onchange = async () => {
+      input.onchange = () => {
         const file = input.files[0];
         if (file) {
           const reader = new FileReader();
           reader.onload = (e) => {
-            const range = quill.getSelection();
-            quill.insertEmbed(range.index, "image", e.target.result);
+            const range = modalQuill.getSelection();
+            modalQuill.insertEmbed(range.index, "image", e.target.result);
           };
           reader.readAsDataURL(file);
         }
       };
     };
-    const toolbar = quill.getModule("toolbar");
+    const toolbar = modalQuill.getModule("toolbar");
     toolbar.addHandler("image", imageHandler);
   }
 }
 
-// Checklist Functions
-function addChecklistItem(text = "", completed = false) {
-  const itemId = Date.now() + Math.random();
+// Modal Checklist Functions
+function addModalChecklistItem(text = "", completed = false) {
   const itemDiv = document.createElement("div");
   itemDiv.className = "checklist-item";
-  itemDiv.dataset.id = itemId;
   itemDiv.innerHTML = `
         <input type="checkbox" ${
           completed ? "checked" : ""
@@ -165,82 +143,87 @@ function addChecklistItem(text = "", completed = false) {
   checkbox.addEventListener("change", () => {
     if (checkbox.checked) itemDiv.classList.add("completed");
     else itemDiv.classList.remove("completed");
-    updateChecklistItems();
+    updateModalChecklistItems();
   });
-
-  textInput.addEventListener("input", () => updateChecklistItems());
+  textInput.addEventListener("input", () => updateModalChecklistItems());
   removeBtn.addEventListener("click", () => {
     itemDiv.remove();
-    updateChecklistItems();
+    updateModalChecklistItems();
   });
 
-  checklistContainer.appendChild(itemDiv);
+  modalChecklistContainer.appendChild(itemDiv);
   if (checkbox.checked) itemDiv.classList.add("completed");
-  updateChecklistItems();
+  updateModalChecklistItems();
   lucide.createIcons();
 }
 
-function updateChecklistItems() {
-  checklistItems = [];
-  document.querySelectorAll(".checklist-item").forEach((item) => {
-    checklistItems.push({
-      text: item.querySelector(".checklist-text").value,
-      completed: item.querySelector(".checklist-checkbox").checked,
+function updateModalChecklistItems() {
+  modalChecklistItems = [];
+  document
+    .querySelectorAll("#modalChecklistContainer .checklist-item")
+    .forEach((item) => {
+      modalChecklistItems.push({
+        text: item.querySelector(".checklist-text").value,
+        completed: item.querySelector(".checklist-checkbox").checked,
+      });
     });
-  });
 }
 
-function renderChecklist(items) {
-  checklistContainer.innerHTML = "";
-  items.forEach((item) => addChecklistItem(item.text, item.completed));
+// Show Add Note Modal
+function showAddNoteModal() {
+  // Reset form
+  modalNoteTitle.value = "";
+  if (modalQuill) modalQuill.root.innerHTML = "";
+  modalNoteCategory.value = "personal";
+  modalNoteLabels.value = "";
+  modalChecklistContainer.innerHTML = "";
+  modalChecklistItems = [];
+  modalPinnedStatus = false;
+  modalPinNoteBtn.classList.remove("text-gray-800");
+  modalPinNoteBtn.classList.add("text-gray-400");
+
+  addNoteModal.classList.remove("hidden");
+  addNoteModal.classList.add("active");
+  setTimeout(() => modalNoteTitle.focus(), 100);
+  initModalQuill();
+  lucide.createIcons();
 }
 
-// Show/Hide New Note Form
-function showNewNoteForm() {
-  newNoteSection.classList.remove("hidden");
-  newNoteSection.scrollIntoView({ behavior: "smooth" });
-  if (quill) setTimeout(() => quill.focus(), 100);
+function closeAddNoteModalFunc() {
+  addNoteModal.classList.add("hidden");
+  addNoteModal.classList.remove("active");
+  isSaving = false;
 }
 
-function hideNewNoteForm() {
-  newNoteSection.classList.add("hidden");
-  noteTitleInput.value = "";
-  if (quill) quill.root.innerHTML = "";
-  checklistContainer.innerHTML = "";
-  checklistItems = [];
-  currentPinnedStatus = false;
-  pinNoteBtn.classList.remove("text-gray-600");
-}
+// Save Note from Modal
+async function saveModalNote() {
+  if (isSaving) return;
 
-// Add Note
-async function addNewNote() {
   const user = auth.currentUser;
   if (!user) return;
 
-  const title = noteTitleInput.value.trim();
-  const content = quill ? quill.root.innerHTML : "";
-  const category = noteCategory.value;
-  const labels = noteLabels.value
+  const title = modalNoteTitle.value.trim();
+  const content = modalQuill ? modalQuill.root.innerHTML : "";
+  const category = modalNoteCategory.value;
+  const labels = modalNoteLabels.value
     .split(",")
     .map((l) => l.trim())
     .filter((l) => l);
-  const pinned = currentPinnedStatus;
+  const pinned = modalPinnedStatus;
 
   if (
     !title &&
     (!content || content === "<p><br></p>") &&
-    checklistItems.length === 0
+    modalChecklistItems.length === 0
   ) {
-    showToast("Please add a title, content, or checklist item.", "warning");
+    showToast("Please add a title, content, or checklist item", "warning");
     return;
   }
 
-  const saveBtn = document.getElementById("addNoteBtn");
-  const originalText = saveBtn.innerHTML;
-  saveBtn.innerHTML =
-    '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Saving...';
-  saveBtn.disabled = true;
-  lucide.createIcons();
+  isSaving = true;
+  saveModalNoteBtn.innerHTML =
+    '<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto"></div>';
+  saveModalNoteBtn.disabled = true;
 
   try {
     await addDoc(collection(db, "notes"), {
@@ -250,62 +233,65 @@ async function addNewNote() {
       category: category,
       labels: labels,
       pinned: pinned,
-      checklist: checklistItems,
+      checklist: modalChecklistItems,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
-    hideNewNoteForm();
+    closeAddNoteModalFunc();
     showToast("Note saved successfully!", "success");
   } catch (error) {
-    showToast("Error saving note: " + error.message, "error");
-    saveBtn.innerHTML = originalText;
-    saveBtn.disabled = false;
+    showToast("Error: " + error.message, "error");
+  } finally {
+    saveModalNoteBtn.innerHTML = "Save Note";
+    saveModalNoteBtn.disabled = false;
+    isSaving = false;
   }
 }
 
-// Pin Note Toggle
-pinNoteBtn.addEventListener("click", () => {
-  currentPinnedStatus = !currentPinnedStatus;
-  if (currentPinnedStatus) {
-    pinNoteBtn.classList.add("text-gray-800");
-    pinNoteBtn.classList.remove("text-gray-400");
+// Pin toggle for modal
+modalPinNoteBtn.addEventListener("click", () => {
+  modalPinnedStatus = !modalPinnedStatus;
+  if (modalPinnedStatus) {
+    modalPinNoteBtn.classList.add("text-gray-800");
+    modalPinNoteBtn.classList.remove("text-gray-400");
   } else {
-    pinNoteBtn.classList.add("text-gray-400");
-    pinNoteBtn.classList.remove("text-gray-800");
+    modalPinNoteBtn.classList.add("text-gray-400");
+    modalPinNoteBtn.classList.remove("text-gray-800");
   }
 });
 
-addChecklistBtn.addEventListener("click", () => addChecklistItem("", false));
-sidebarAddNoteBtn?.addEventListener("click", () => {
-  showNewNoteForm();
-  closeSidebarOnMobile();
-});
-mobileAddNoteBtn?.addEventListener("click", showNewNoteForm);
-cancelNoteBtn?.addEventListener("click", hideNewNoteForm);
+modalAddChecklistBtn.addEventListener("click", () =>
+  addModalChecklistItem("", false)
+);
 
-// Sidebar toggle functions
-function openSidebar() {
-  sidebar.classList.remove("hidden");
-  setTimeout(() => sidebar.classList.remove("-translate-x-full"), 10);
+// Sidebar mobile functions
+function openMobileSidebar() {
+  sidebar.classList.add("mobile-open");
+  sidebarOverlay.classList.remove("hidden");
+  document.body.style.overflow = "hidden";
 }
 
-function closeSidebarOnMobile() {
-  if (window.innerWidth < 768) {
-    sidebar.classList.add("hidden");
+function closeMobileSidebar() {
+  sidebar.classList.remove("mobile-open");
+  sidebarOverlay.classList.add("hidden");
+  document.body.style.overflow = "";
+}
+
+function toggleMobileSidebar() {
+  if (sidebar.classList.contains("mobile-open")) {
+    closeMobileSidebar();
+  } else {
+    openMobileSidebar();
   }
 }
 
-menuBtn?.addEventListener("click", openSidebar);
-closeSidebarBtn?.addEventListener("click", closeSidebarOnMobile);
+// Event listeners for mobile
+mobileMenuToggle?.addEventListener("click", toggleMobileSidebar);
+mobileMenuBtn?.addEventListener("click", toggleMobileSidebar);
+closeSidebarBtn?.addEventListener("click", closeMobileSidebar);
+sidebarOverlay?.addEventListener("click", closeMobileSidebar);
 
-// Open Modal by Index (to avoid JSON serialization issues)
-function openNoteModalByIndex(index) {
-  if (index >= 0 && index < currentNotes.length) {
-    openNoteModal(currentNotes[index]);
-  }
-}
-
-// Open Modal
+// Open Note Modal
 function openNoteModal(note) {
   currentNoteId = note.id;
   modalTitle.value = note.title || "";
@@ -334,21 +320,12 @@ function openNoteModal(note) {
   }
 
   modal.classList.remove("hidden");
-  modal.classList.add("flex");
+  modal.classList.add("active");
   lucide.createIcons();
 }
 
-// Update Note
 async function updateNote() {
   if (!currentNoteId) return;
-
-  const saveBtn = document.getElementById("modalSave");
-  const originalText = saveBtn.innerHTML;
-  saveBtn.innerHTML =
-    '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Saving...';
-  saveBtn.disabled = true;
-  lucide.createIcons();
-
   try {
     await updateDoc(doc(db, "notes", currentNoteId), {
       title: modalTitle.value.trim() || "Untitled",
@@ -356,74 +333,23 @@ async function updateNote() {
       updatedAt: serverTimestamp(),
     });
     closeNoteModal();
-    showToast("Note updated successfully!", "success");
+    showToast("Note updated!", "success");
   } catch (error) {
-    showToast("Error updating note: " + error.message, "error");
-    saveBtn.innerHTML = originalText;
-    saveBtn.disabled = false;
+    showToast("Error: " + error.message, "error");
   }
 }
 
 async function deleteNote(id) {
-  // Create custom confirmation dialog
-  const confirmed = await showConfirmDialog(
-    "Sureness? Delete this note?",
-    "This action cannot be undone."
-  );
-  if (confirmed) {
-    try {
-      await deleteDoc(doc(db, "notes", id));
-      closeNoteModal();
-      showToast("Note deleted successfully!", "success");
-    } catch (error) {
-      showToast("Error deleting note: " + error.message, "error");
-    }
+  if (confirm("Delete this note?")) {
+    await deleteDoc(doc(db, "notes", id));
+    closeNoteModal();
+    showToast("Note deleted!", "success");
   }
-}
-
-function showConfirmDialog(title, message) {
-  return new Promise((resolve) => {
-    const overlay = document.createElement("div");
-    overlay.className =
-      "fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4";
-    overlay.innerHTML = `
-            <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
-                <div class="text-center">
-                    <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i data-lucide="alert-triangle" class="w-6 h-6 text-red-600"></i>
-                    </div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2">${title}</h3>
-                    <p class="text-sm text-gray-600 mb-6">${message}</p>
-                    <div class="flex gap-3">
-                        <button class="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-xl font-medium hover:bg-gray-200 transition-colors cancel-btn">
-                            Cancel
-                        </button>
-                        <button class="flex-1 bg-red-500 text-white py-2.5 rounded-xl font-medium hover:bg-red-600 transition-colors confirm-btn">
-                            Delete
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-    document.body.appendChild(overlay);
-    lucide.createIcons();
-
-    overlay.querySelector(".cancel-btn").addEventListener("click", () => {
-      document.body.removeChild(overlay);
-      resolve(false);
-    });
-
-    overlay.querySelector(".confirm-btn").addEventListener("click", () => {
-      document.body.removeChild(overlay);
-      resolve(true);
-    });
-  });
 }
 
 function closeNoteModal() {
   modal.classList.add("hidden");
-  modal.classList.remove("flex");
+  modal.classList.remove("active");
   currentNoteId = null;
 }
 
@@ -441,12 +367,10 @@ function formatDate(timestamp) {
 
 function escapeHtml(str) {
   if (!str) return "";
-  return String(str).replace(/[&<>]/g, function (m) {
-    if (m === "&") return "&amp;";
-    if (m === "<") return "&lt;";
-    if (m === ">") return "&gt;";
-    return m;
-  });
+  return String(str).replace(
+    /[&<>]/g,
+    (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[m])
+  );
 }
 
 // Subscribe to Notes
@@ -467,30 +391,13 @@ function subscribeToNotes(userId) {
     let notes = [];
     snapshot.forEach((doc) => notes.push({ id: doc.id, ...doc.data() }));
     notes.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
-    currentNotes = notes; // Store for modal access
+    currentNotes = notes;
 
     if (currentFilter !== "all")
       notes = notes.filter((n) => n.category === currentFilter);
 
     if (notes.length === 0) {
-      const emptyMessage =
-        currentFilter === "all"
-          ? "No notes yet. Create your first note to get started!"
-          : `No ${currentFilter} notes found. Try a different category or create a new note.`;
-      gridContainer.innerHTML = `
-                <div class="col-span-full empty-state">
-                    <div class="max-w-md mx-auto">
-                        <i data-lucide="file-text" class="w-16 h-16 mx-auto block mb-4"></i>
-                        <h3 class="text-lg font-semibold text-gray-700 mb-2">No notes found</h3>
-                        <p class="text-gray-500 mb-6">${emptyMessage}</p>
-                        <button onclick="document.getElementById('sidebarAddNoteBtn')?.click()" class="inline-flex items-center gap-2 bg-gray-800 text-white px-6 py-3 rounded-lg hover:bg-gray-900 transition-colors font-medium">
-                            <i data-lucide="plus" class="w-5 h-5"></i>
-                            Create your first note
-                        </button>
-                    </div>
-                </div>
-            `;
-      lucide.createIcons();
+      gridContainer.innerHTML = `<div class="col-span-full text-center py-16 text-gray-400">No notes yet. Click "Add Note" to create one!</div>`;
       return;
     }
 
@@ -503,42 +410,35 @@ function subscribeToNotes(userId) {
       const contentPreview =
         plainContent ||
         (hasChecklist
-          ? `${note.checklist.length} checklist item${
-              note.checklist.length !== 1 ? "s" : ""
-            }`
+          ? `${note.checklist.length} checklist item(s)`
           : "No content");
 
       html += `
                 <div class="note-card ${
                   note.pinned ? "pinned" : ""
-                } p-5 group" data-note-index="${index}" onclick="window.openNoteModalByIndex(${index})">
+                } p-5 group cursor-pointer" onclick="window.openNoteModal(${JSON.stringify(
+        note
+      )})">
                     <div class="flex justify-between items-start mb-3">
-                        <h3 class="font-semibold text-gray-900 flex-1 text-lg leading-tight pr-2">${
+                        <h3 class="font-semibold text-gray-900 flex-1 text-lg">${
                           escapeHtml(note.title) || "Untitled"
                         }</h3>
-                        <div class="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                            ${
-                              note.pinned
-                                ? '<div class="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center"><i data-lucide="pin" class="w-3 h-3 text-gray-600"></i></div>'
-                                : ""
-                            }
-                            <button class="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center hover:bg-red-200 transition-colors" onclick="event.stopPropagation(); window.deleteNote('${
-                              note.id
-                            }')">
-                                <i data-lucide="trash-2" class="w-3 h-3 text-red-600"></i>
-                            </button>
-                        </div>
+                        <button class="opacity-0 group-hover:opacity-100 w-6 h-6 bg-red-100 rounded-full flex items-center justify-center hover:bg-red-200 transition-colors" onclick="event.stopPropagation(); window.deleteNote('${
+                          note.id
+                        }')">
+                            <i data-lucide="trash-2" class="w-3 h-3 text-red-600"></i>
+                        </button>
                     </div>
-                    <p class="text-sm text-gray-600 line-clamp-2 mb-4 leading-relaxed">${escapeHtml(
+                    <p class="text-sm text-gray-600 line-clamp-2 mb-4">${escapeHtml(
                       contentPreview
                     )}</p>
                     <div class="flex items-center justify-between">
                         <span class="category-badge category-${
                           note.category
                         }">${note.category}</span>
-                        <div class="text-xs text-gray-400 font-medium">${formatDate(
+                        <span class="text-xs text-gray-400">${formatDate(
                           note.updatedAt
-                        )}</div>
+                        )}</span>
                     </div>
                 </div>
             `;
@@ -550,23 +450,12 @@ function subscribeToNotes(userId) {
 
 // Render Auth UI
 function renderAuthUI(user) {
-  const sidebar = document.getElementById("sidebar");
-  const mobileHeader = document.getElementById("mobileHeader");
-  const body = document.body;
-
   if (user) {
-    // Show sidebar and mobile header when logged in
-    if (sidebar) {
-      sidebar.classList.remove("hidden");
-    }
-    if (mobileHeader) {
-      mobileHeader.classList.remove("hidden");
-    }
-    body.classList.add("sidebar-visible");
-
+    sidebar.classList.remove("hidden");
+    mobileMenuToggle?.classList.remove("hidden");
     authContainer.innerHTML = `
             <div class="space-y-4">
-                <div class="text-center p-3 bg-gray-50 rounded-xl border border-gray-100">
+                <div class="text-center p-3 bg-gray-50 rounded-xl">
                     <div class="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-2">
                         <i data-lucide="user" class="w-5 h-5 text-white"></i>
                     </div>
@@ -574,119 +463,46 @@ function renderAuthUI(user) {
                       user.email
                     )}</p>
                 </div>
-                <button id="logoutBtn" class="w-full flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-white px-4 py-2.5 rounded-[2rem] hover:bg-red-500 transition-all border border-gray-200 hover:border-red-500 font-medium">
+                <button id="logoutBtn" class="w-full flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-white px-4 py-2.5 rounded-[2rem] hover:bg-red-500 transition-all border border-gray-200">
                     <i data-lucide="log-out" class="w-4 h-4"></i>
                     Sign out
                 </button>
             </div>
         `;
+    document
+      .getElementById("logoutBtn")
+      ?.addEventListener("click", () => signOut(auth));
 
-    const logoutBtn = document.getElementById("logoutBtn");
-    if (logoutBtn) {
-      logoutBtn.addEventListener("click", async () => {
-        await signOut(auth);
-        showToast("Signed out successfully!", "info");
-      });
-    }
-
-    newNoteSection.classList.add("hidden");
     notesGrid.classList.remove("hidden");
     loginSection.classList.add("hidden");
     notesGrid.innerHTML =
       '<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5"></div>';
-    initQuill();
     subscribeToNotes(user.uid);
     lucide.createIcons();
   } else {
-    // Hide sidebar and mobile header when logged out
-    if (sidebar) {
-      sidebar.classList.add("hidden");
-    }
-    if (mobileHeader) {
-      mobileHeader.classList.add("hidden");
-    }
-    body.classList.remove("sidebar-visible");
-
+    sidebar.classList.add("hidden");
+    mobileMenuToggle?.classList.add("hidden");
     authContainer.innerHTML = "";
-
-    newNoteSection.classList.add("hidden");
     notesGrid.classList.add("hidden");
     loginSection.classList.remove("hidden");
-
     if (unsubscribeNotes) unsubscribeNotes();
-
     lucide.createIcons();
   }
 }
 
-// Login/Signup with better loader UI
-const loginBtn = document.getElementById("loginBtn");
-const signupBtn = document.getElementById("signupBtn");
-
-if (loginBtn) {
-  loginBtn.addEventListener("click", async () => {
-    const email = document.getElementById("loginEmail").value;
-    const pwd = document.getElementById("loginPassword").value;
-
-    if (!email || !pwd) {
-      showToast("Please enter both email and password", "warning");
-      return;
-    }
-
-    // Show loading state
-    const originalText = loginBtn.innerHTML;
-    loginBtn.innerHTML =
-      '<div class="flex items-center justify-center gap-2"><div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Signing in...</div>';
-    loginBtn.disabled = true;
-
-    try {
-      await signInWithEmailAndPassword(auth, email, pwd);
-      showToast("Welcome back!", "success");
-    } catch (err) {
-      showToast(err.message, "error");
-      loginBtn.innerHTML = originalText;
-      loginBtn.disabled = false;
-    }
-  });
-}
-
-if (signupBtn) {
-  signupBtn.addEventListener("click", async () => {
-    const email = document.getElementById("loginEmail").value;
-    const pwd = document.getElementById("loginPassword").value;
-
-    if (!email || !pwd) {
-      showToast("Please enter both email and password", "warning");
-      return;
-    }
-
-    if (pwd.length < 6) {
-      showToast("Password must be at least 6 characters", "warning");
-      return;
-    }
-
-    // Show loading state
-    const originalText = signupBtn.innerHTML;
-    signupBtn.innerHTML =
-      '<div class="flex items-center justify-center gap-2"><div class="w-4 h-4 border-2 border-gray-700 border-t-transparent rounded-full animate-spin"></div> Creating account...</div>';
-    signupBtn.disabled = true;
-
-    try {
-      await createUserWithEmailAndPassword(auth, email, pwd);
-      showToast("Account created successfully! Welcome!", "success");
-    } catch (err) {
-      showToast(err.message, "error");
-      signupBtn.innerHTML = originalText;
-      signupBtn.disabled = false;
-    }
-  });
-}
-
 // Event Listeners
-addNoteBtn.addEventListener("click", addNewNote);
-closeModal.addEventListener("click", closeNoteModal);
-modalDelete.addEventListener("click", () => deleteNote(currentNoteId));
-modalSave.addEventListener("click", updateNote);
+document
+  .getElementById("sidebarAddNoteBtn")
+  ?.addEventListener("click", showAddNoteModal);
+document
+  .getElementById("mobileAddNoteBtn")
+  ?.addEventListener("click", showAddNoteModal);
+closeAddNoteModal?.addEventListener("click", closeAddNoteModalFunc);
+cancelModalNoteBtn?.addEventListener("click", closeAddNoteModalFunc);
+saveModalNoteBtn?.addEventListener("click", saveModalNote);
+closeModal?.addEventListener("click", closeNoteModal);
+modalDelete?.addEventListener("click", () => deleteNote(currentNoteId));
+modalSave?.addEventListener("click", updateNote);
 
 // Category Filters
 document.querySelectorAll(".category-filter-btn").forEach((btn) => {
@@ -702,67 +518,27 @@ document.querySelectorAll(".category-filter-btn").forEach((btn) => {
 
 // Login/Signup
 document.getElementById("loginBtn")?.addEventListener("click", async () => {
-  const btn = document.getElementById("loginBtn");
   const email = document.getElementById("loginEmail").value;
   const pwd = document.getElementById("loginPassword").value;
-
-  if (!email || !pwd) {
-    showToast("Please enter both email and password.", "warning");
-    return;
-  }
-
-  // Show loading state
-  const originalText = btn.innerHTML;
-  btn.innerHTML =
-    '<i data-lucide="loader-2" class="w-2 h-2 animate-spin"></i> Signing in...';
-  btn.disabled = true;
-  lucide.createIcons();
-
-  try {
-    await signInWithEmailAndPassword(auth, email, pwd);
-    showToast("Welcome back!", "success");
-  } catch (err) {
-    showToast("Login failed: " + err.message, "error");
-    btn.innerHTML = originalText;
-    btn.disabled = false;
-  }
+  if (!email || !pwd) return showToast("Enter email and password", "warning");
+  await signInWithEmailAndPassword(auth, email, pwd).catch((err) =>
+    showToast(err.message, "error")
+  );
 });
 
 document.getElementById("signupBtn")?.addEventListener("click", async () => {
-  const btn = document.getElementById("signupBtn");
   const email = document.getElementById("loginEmail").value;
   const pwd = document.getElementById("loginPassword").value;
-
-  if (!email || !pwd) {
-    showToast("Please enter both email and password.", "warning");
-    return;
-  }
-
-  if (pwd.length < 6) {
-    showToast("Password must be at least 6 characters.", "warning");
-    return;
-  }
-
-  // Show loading state
-  const originalText = btn.innerHTML;
-  btn.innerHTML =
-    '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Creating account...';
-  btn.disabled = true;
-  lucide.createIcons();
-
-  try {
-    await createUserWithEmailAndPassword(auth, email, pwd);
-    showToast("Wowowow. Account created successfully! ", "success");
-  } catch (err) {
-    showToast("Signup failed: " + err.message, "error");
-    btn.innerHTML = originalText;
-    btn.disabled = false;
-  }
+  if (!email || !pwd) return showToast("Enter email and password", "warning");
+  if (pwd.length < 6)
+    return showToast("Password must be 6+ characters", "warning");
+  await createUserWithEmailAndPassword(auth, email, pwd).catch((err) =>
+    showToast(err.message, "error")
+  );
 });
 
 onAuthStateChanged(auth, renderAuthUI);
 
 // Make global
 window.openNoteModal = openNoteModal;
-window.openNoteModalByIndex = openNoteModalByIndex;
 window.deleteNote = deleteNote;

@@ -302,3 +302,47 @@ button,
 .animate-spin {
   animation: spin 1s linear infinite;
 }
+
+/* Add to existing CSS */
+
+/* Mobile sidebar transitions */
+#sidebar {
+  transition: transform 0.3s ease-in-out;
+}
+
+#sidebar.mobile-open {
+  transform: translateX(0);
+}
+
+/* Modal animations */
+#addNoteModal.active,
+#noteModal.active {
+  display: flex !important;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Ensure Quill editor is clickable */
+.ql-editor {
+  cursor: text;
+  min-height: 200px;
+}
+
+.ql-editor.ql-blank::before {
+  font-style: normal;
+  color: #9ca3af;
+  content: "Write your note here...";
+}
+
+/* Focus states */
+.ql-editor:focus {
+  outline: none;
+}
