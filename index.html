@@ -21,21 +21,14 @@
 </head>
 <body class="bg-gray-100">
     
-    <div class="flex h-screen overflow-hidden">
-        
-        <!-- Sidebar Overlay -->
-        <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-30 hidden md:hidden" onclick="closeSidebarOnMobile()"></div>
-        
-        <!-- Sidebar - Hidden by default, shown when logged in -->
-        <aside id="sidebar" class="hidden md:flex w-64 bg-white border-r border-gray-200 flex-col fixed inset-y-0 left-0 z-40">
-            <div class="p-4 border-b border-gray-100 flex items-center justify-between">
+    <!-- Sidebar - Fixed position, separate from main flow -->
+    <aside id="sidebar" class="hidden md:block fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 z-30 transform transition-transform duration-300">
+        <div class="flex flex-col h-full">
+            <div class="p-4 border-b border-gray-100">
                 <div class="flex items-center gap-2">
                     <i data-lucide="lightbulb" class="w-6 h-6 text-gray-700"></i>
                     <h1 class="text-lg font-medium text-gray-700">Know Your Note</h1>
                 </div>
-                <button id="closeSidebarBtn" class="md:hidden p-1 hover:bg-gray-100 rounded-full">
-                    <i data-lucide="x" class="w-5 h-5 text-gray-500"></i>
-                </button>
             </div>
             
             <!-- Add Note Button -->
@@ -47,7 +40,7 @@
             </div>
             
             <!-- Categories -->
-            <div class="px-4 py-2">
+            <div class="flex-1 px-4 py-2 overflow-y-auto">
                 <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3 px-3">Categories</p>
                 <nav class="space-y-1">
                     <button data-category="all" class="category-filter-btn w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-600 rounded-[2rem] hover:bg-gray-100 transition-colors">
@@ -78,127 +71,123 @@
             </div>
             
             <!-- User Section -->
-            <div class="mt-auto p-4 border-t border-gray-100" id="authContainer"></div>
-        </aside>
+            <div class="p-4 border-t border-gray-100" id="authContainer"></div>
+        </div>
+    </aside>
+    
+    <!-- Main Content - Will have margin-left when sidebar is visible -->
+    <main id="mainContent" class="flex-1 overflow-y-auto">
         
-        <!-- Main Content -->
-        <main id="mainContent" class="flex-1 overflow-y-auto">
-            
-            <!-- Mobile Header - Hidden by default, shown when logged in -->
-            <div id="mobileHeader" class="md:hidden bg-white border-b border-gray-200 p-4 flex justify-between items-center sticky top-0 z-10 hidden">
-                <div class="flex items-center gap-2">
-                    <button id="menuBtn" class="p-1 hover:bg-gray-100 rounded-full">
-                        <i data-lucide="menu" class="w-5 h-5 text-gray-700"></i>
-                    </button>
-                    <i data-lucide="lightbulb" class="w-5 h-5 text-gray-700"></i>
-                    <h1 class="text-base font-medium text-gray-700">Know Your Note</h1>
-                </div>
-                <button id="mobileAddNoteBtn" class="p-2 bg-gray-800 text-white rounded-[2rem]">
-                    <i data-lucide="plus" class="w-5 h-5"></i>
+        <!-- Mobile Header -->
+        <div id="mobileHeader" class="md:hidden bg-white border-b border-gray-200 p-4 flex justify-between items-center sticky top-0 z-10 hidden">
+            <div class="flex items-center gap-2">
+                <button id="menuBtn" class="p-1 hover:bg-gray-100 rounded-full">
+                    <i data-lucide="menu" class="w-5 h-5 text-gray-700"></i>
                 </button>
+                <i data-lucide="lightbulb" class="w-5 h-5 text-gray-700"></i>
+                <h1 class="text-base font-medium text-gray-700">Know Your Note</h1>
             </div>
-            
-            <!-- New Note Form (Hidden by default) -->
-            <div id="newNoteSection" class="hidden max-w-2xl mx-auto px-4 py-6">
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-200">
-                    <div class="p-5">
-                        <input type="text" id="noteTitleInput" 
-                               class="w-full text-xl font-medium outline-none bg-transparent mb-4"
-                               placeholder="Title">
-                        
-                        <!-- Rich Text Editor -->
-                        <div id="toolbar-container" class="mb-3 flex flex-wrap gap-1 border-b border-gray-100 pb-2">
-                            <button class="ql-bold p-1.5 rounded-full hover:bg-gray-100" title="Bold"><i data-lucide="bold" class="w-4 h-4"></i></button>
-                            <button class="ql-italic p-1.5 rounded-full hover:bg-gray-100" title="Italic"><i data-lucide="italic" class="w-4 h-4"></i></button>
-                            <button class="ql-underline p-1.5 rounded-full hover:bg-gray-100" title="Underline"><i data-lucide="underline" class="w-4 h-4"></i></button>
-                            <button class="ql-align p-1.5 rounded-full hover:bg-gray-100" value="" title="Align Left"><i data-lucide="align-left" class="w-4 h-4"></i></button>
-                            <button class="ql-list p-1.5 rounded-full hover:bg-gray-100" value="bullet" title="Bullet List"><i data-lucide="list" class="w-4 h-4"></i></button>
-                            <button class="ql-link p-1.5 rounded-full hover:bg-gray-100" title="Insert Link"><i data-lucide="link" class="w-4 h-4"></i></button>
-                            <button class="ql-image p-1.5 rounded-full hover:bg-gray-100" title="Insert Image"><i data-lucide="image" class="w-4 h-4"></i></button>
-                        </div>
-                        <div id="editor-container" style="min-height: 150px;" class="bg-gray-50 rounded-xl p-3"></div>
-                        
-                        <!-- Checklist -->
-                        <div class="mt-4">
-                            <button id="addChecklistBtn" class="text-sm text-gray-400 hover:text-gray-600 flex items-center gap-2 transition-colors rounded-full px-3 py-1.5 hover:bg-gray-100">
-                                <i data-lucide="check-square" class="w-4 h-4"></i>
-                                Add checklist
-                            </button>
-                            <div id="checklistContainer" class="mt-3 space-y-2"></div>
-                        </div>
-                        
-                        <!-- Metadata -->
-                        <div class="flex flex-wrap gap-3 mt-5 pt-4 border-t border-gray-100">
-                            <select id="noteCategory" class="text-sm border border-gray-200 bg-gray-50 rounded-[2rem] px-3 py-2">
-                                <option value="personal">Personal</option>
-                                <option value="work">Work</option>
-                                <option value="ideas">Ideas</option>
-                                <option value="tasks">Tasks</option>
-                                <option value="important">Important</option>
-                            </select>
-                            
-                            <input type="text" id="noteLabels" placeholder="Labels (comma separated)" 
-                                   class="text-sm border border-gray-200 bg-gray-50 rounded-[2rem] px-3 py-2 flex-1 min-w-[150px]">
-                        </div>
+            <button id="mobileAddNoteBtn" class="p-2 bg-gray-800 text-white rounded-[2rem]">
+                <i data-lucide="plus" class="w-5 h-5"></i>
+            </button>
+        </div>
+        
+        <!-- New Note Form -->
+        <div id="newNoteSection" class="hidden max-w-2xl mx-auto px-4 py-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200">
+                <div class="p-5">
+                    <input type="text" id="noteTitleInput" 
+                           class="w-full text-xl font-medium outline-none bg-transparent mb-4"
+                           placeholder="Title">
+                    
+                    <div id="toolbar-container" class="mb-3 flex flex-wrap gap-1 border-b border-gray-100 pb-2">
+                        <button class="ql-bold p-1.5 rounded-full hover:bg-gray-100" title="Bold"><i data-lucide="bold" class="w-4 h-4"></i></button>
+                        <button class="ql-italic p-1.5 rounded-full hover:bg-gray-100" title="Italic"><i data-lucide="italic" class="w-4 h-4"></i></button>
+                        <button class="ql-underline p-1.5 rounded-full hover:bg-gray-100" title="Underline"><i data-lucide="underline" class="w-4 h-4"></i></button>
+                        <button class="ql-align p-1.5 rounded-full hover:bg-gray-100" value="" title="Align Left"><i data-lucide="align-left" class="w-4 h-4"></i></button>
+                        <button class="ql-list p-1.5 rounded-full hover:bg-gray-100" value="bullet" title="Bullet List"><i data-lucide="list" class="w-4 h-4"></i></button>
+                        <button class="ql-link p-1.5 rounded-full hover:bg-gray-100" title="Insert Link"><i data-lucide="link" class="w-4 h-4"></i></button>
+                        <button class="ql-image p-1.5 rounded-full hover:bg-gray-100" title="Insert Image"><i data-lucide="image" class="w-4 h-4"></i></button>
                     </div>
-                    <div class="px-5 py-3 flex justify-between border-t border-gray-100">
-                        <button id="pinNoteBtn" class="text-sm text-gray-400 hover:text-gray-600 px-3 py-1.5 rounded-[2rem] hover:bg-gray-100 transition-colors flex items-center gap-1">
-                            <i data-lucide="pin" class="w-4 h-4"></i>
-                            Pin
+                    <div id="editor-container" style="min-height: 150px;" class="bg-gray-50 rounded-xl p-3"></div>
+                    
+                    <div class="mt-4">
+                        <button id="addChecklistBtn" class="text-sm text-gray-400 hover:text-gray-600 flex items-center gap-2 transition-colors rounded-full px-3 py-1.5 hover:bg-gray-100">
+                            <i data-lucide="check-square" class="w-4 h-4"></i>
+                            Add checklist
                         </button>
-                        <div class="flex gap-2">
-                            <button id="cancelNoteBtn" class="text-sm text-gray-500 px-4 py-1.5 rounded-[2rem] hover:bg-gray-100 transition-colors">
-                                Cancel
+                        <div id="checklistContainer" class="mt-3 space-y-2"></div>
+                    </div>
+                    
+                    <div class="flex flex-wrap gap-3 mt-5 pt-4 border-t border-gray-100">
+                        <select id="noteCategory" class="text-sm border border-gray-200 bg-gray-50 rounded-[2rem] px-3 py-2">
+                            <option value="personal">Personal</option>
+                            <option value="work">Work</option>
+                            <option value="ideas">Ideas</option>
+                            <option value="tasks">Tasks</option>
+                            <option value="important">Important</option>
+                        </select>
+                        <input type="text" id="noteLabels" placeholder="Labels (comma separated)" 
+                               class="text-sm border border-gray-200 bg-gray-50 rounded-[2rem] px-3 py-2 flex-1 min-w-[150px]">
+                    </div>
+                </div>
+                <div class="px-5 py-3 flex justify-between border-t border-gray-100">
+                    <button id="pinNoteBtn" class="text-sm text-gray-400 hover:text-gray-600 px-3 py-1.5 rounded-[2rem] hover:bg-gray-100 transition-colors flex items-center gap-1">
+                        <i data-lucide="pin" class="w-4 h-4"></i>
+                        Pin
+                    </button>
+                    <div class="flex gap-2">
+                        <button id="cancelNoteBtn" class="text-sm text-gray-500 px-4 py-1.5 rounded-[2rem] hover:bg-gray-100 transition-colors">
+                            Cancel
+                        </button>
+                        <button id="addNoteBtn" class="text-sm bg-gray-800 text-white px-5 py-1.5 rounded-[2rem] hover:bg-gray-900 transition-colors">
+                            Save Note
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Notes Grid - Full width -->
+        <div id="notesGrid" class="hidden px-4 py-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5"></div>
+        </div>
+        
+        <!-- Login Section -->
+        <div id="loginSection" class="flex items-center justify-center min-h-screen px-4">
+            <div class="bg-white rounded-2xl shadow border border-gray-200 w-full max-w-md">
+                <div class="p-8">
+                    <div class="text-center mb-6">
+                        <i data-lucide="lightbulb" class="w-12 h-12 text-gray-700 mx-auto mb-3"></i>
+                        <h2 class="text-2xl font-medium text-gray-800">Know Your Note</h2>
+                        <p class="text-sm text-gray-400 mt-2">Sign in to access your notes</p>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="relative">
+                            <i data-lucide="mail" class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            <input type="email" id="loginEmail" 
+                                   class="w-full px-4 py-2.5 pl-12 border border-gray-200 rounded-[2rem] focus:border-gray-800 focus:outline-none"
+                                   placeholder="Email address">
+                        </div>
+                        <div class="relative">
+                            <i data-lucide="lock" class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            <input type="password" id="loginPassword" 
+                                   class="w-full px-4 py-2.5 pl-12 border border-gray-200 rounded-[2rem] focus:border-gray-800 focus:outline-none"
+                                   placeholder="Password">
+                        </div>
+                        <div class="flex gap-3">
+                            <button id="loginBtn" class="login-action-btn flex-1 bg-gray-800 text-white py-2.5 rounded-[2rem] hover:bg-gray-900 transition-colors font-medium">
+                                Sign in
                             </button>
-                            <button id="addNoteBtn" class="text-sm bg-gray-800 text-white px-5 py-1.5 rounded-[2rem] hover:bg-gray-900 transition-colors">
-                                Save Note
+                            <button id="signupBtn" class="login-action-btn flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-[2rem] hover:bg-gray-50 transition-colors font-medium">
+                                Sign up
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
-            
-            <!-- Notes Grid -->
-            <div id="notesGrid" class="hidden max-w-7xl mx-auto px-4 py-6">
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5"></div>
-            </div>
-            
-            <!-- Login Section - Full screen centered -->
-            <div id="loginSection" class="w-full h-full flex items-center justify-center px-4" style="min-height: 100vh;">
-                <div class="bg-white rounded-2xl shadow border border-gray-200 w-full max-w-md">
-                    <div class="p-8">
-                        <div class="text-center mb-6">
-                            <i data-lucide="lightbulb" class="w-12 h-12 text-gray-700 mx-auto mb-3"></i>
-                            <h2 class="text-2xl font-medium text-gray-800">Know Your Note</h2>
-                            <p class="text-sm text-gray-400 mt-2">Sign in to access your notes</p>
-                        </div>
-                        <div class="space-y-4">
-                            <div class="relative">
-                                <i data-lucide="mail" class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                                <input type="email" id="loginEmail" 
-                                       class="w-full px-4 py-2.5 pl-12 border border-gray-200 rounded-[2rem] focus:border-gray-800 focus:outline-none"
-                                       placeholder="Email address">
-                            </div>
-                            <div class="relative">
-                                <i data-lucide="lock" class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                                <input type="password" id="loginPassword" 
-                                       class="w-full px-4 py-2.5 pl-12 border border-gray-200 rounded-[2rem] focus:border-gray-800 focus:outline-none"
-                                       placeholder="Password">
-                            </div>
-                            <div class="flex gap-3">
-                                <button id="loginBtn" class="flex-1 bg-gray-800 text-white py-2.5 rounded-[2rem] hover:bg-gray-900 transition-colors font-medium">
-                                    Sign in
-                                </button>
-                                <button id="signupBtn" class="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-[2rem] hover:bg-gray-50 transition-colors font-medium">
-                                    Sign up
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
+        </div>
+    </main>
     
     <!-- Note View Modal -->
     <div id="noteModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
