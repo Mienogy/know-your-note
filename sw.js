@@ -4,6 +4,7 @@ const urlsToCache = [
   '/index.html',
   '/css/style.css',
   '/js/app.js',
+  '/manifest.json',
   'https://cdn.tailwindcss.com',
   'https://unpkg.com/lucide@latest',
   'https://cdn.quilljs.com/1.3.6/quill.snow.css',
