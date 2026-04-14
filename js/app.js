@@ -18,6 +18,8 @@ import {
   where,
   serverTimestamp,
   updateDoc,
+  getDocs,
+  writeBatch
 } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
 // Firebase Configuration
@@ -40,746 +42,676 @@ const authContainer = document.getElementById("authContainer");
 const notesGrid = document.getElementById("notesGrid");
 const notesGridContainer = document.getElementById("notesGridContainer");
 const loginSection = document.getElementById("loginSection");
-const addNoteModal = document.getElementById("addNoteModal");
-const viewNoteModal = document.getElementById("noteModal");
-const modalNoteTitle = document.getElementById("modalNoteTitle");
-const modalNoteCategory = document.getElementById("modalNoteCategory");
-const modalPinNoteBtn = document.getElementById("modalPinNoteBtn");
-const modalAddChecklistBtn = document.getElementById("modalAddChecklistBtn");
-const modalChecklistContainer = document.getElementById(
-  "modalChecklistContainer"
-);
-const closeAddNoteModal = document.getElementById("closeAddNoteModal");
-const cancelModalNoteBtn = document.getElementById("cancelModalNoteBtn");
-const saveModalNoteBtn = document.getElementById("saveModalNoteBtn");
+const noteModal = document.getElementById("noteModal");
+const modalContent = noteModal ? noteModal.querySelector(".modal-content") : null;
 const modalTitle = document.getElementById("modalTitle");
-const modalContent = document.getElementById("modalContent");
-const modalCategory = document.getElementById("modalCategory");
-const modalChecklist = document.getElementById("modalChecklist");
+const modalPinNoteBtn = document.getElementById("modalPinNoteBtn");
+const modalAddChecklistItemBtn = document.getElementById("modalAddChecklistItemBtn");
+const modalChecklistContainer = document.getElementById("modalChecklistContainer");
+const modalCategorySelect = document.getElementById("modalCategorySelect");
+const modalDeleteBtn = document.getElementById("modalDeleteBtn");
+const modalSaveBtn = document.getElementById("modalSaveBtn");
 const closeModal = document.getElementById("closeModal");
-const modalDelete = document.getElementById("modalDelete");
-const modalSave = document.getElementById("modalSave");
-const mainContent = document.getElementById("mainContent");
-const desktopHeader = document.getElementById("desktopHeader");
+const lastUpdatedDisplay = document.getElementById("lastUpdatedDisplay");
+const searchInput = document.getElementById("searchInput");
+const colorPicker = document.getElementById("colorPicker");
+const modalBody = document.getElementById("modalBody");
+const dynamicCategories = document.getElementById("dynamicCategories");
+const addCategoryContainer = document.getElementById("addCategoryContainer");
+const newCategoryInput = document.getElementById("newCategoryInput");
+const showAddCategoryBtn = document.getElementById("showAddCategoryBtn");
 
-// Sidebar Elements
+// Delete Confirmation Elements
+const deleteConfirmModal = document.getElementById("deleteConfirmModal");
+const deleteConfirmTitle = document.getElementById("deleteConfirmTitle");
+const confirmDeleteBtn = document.getElementById("confirmDeleteBtn");
+const cancelDeleteBtn = document.getElementById("cancelDeleteBtn");
+const rememberDeleteDecision = document.getElementById("rememberDeleteDecision");
+
+// Sidebar & Headers
 const sidebar = document.getElementById("sidebar");
+const sidebarOverlay = document.getElementById("sidebarOverlay");
 const mobileMenuToggle = document.getElementById("mobileMenuToggle");
 const mobileMenuBtn = document.getElementById("mobileMenuBtn");
 const closeSidebarBtn = document.getElementById("closeSidebarBtn");
-const sidebarOverlay = document.getElementById("sidebarOverlay");
+const mobileHeader = document.getElementById("mobileHeader");
+const desktopHeader = document.getElementById("desktopHeader");
+const mainContent = document.getElementById("mainContent");
 
+// State
 let currentNoteId = null;
 let modalQuill = null;
 let currentFilter = "all";
+let searchTerm = "";
 let modalPinnedStatus = false;
-let modalChecklistItems = [];
+let modalColor = "default";
 let unsubscribeNotes = null;
+let unsubscribeCategories = null;
+let allNotes = [];
+let userCategories = [];
 
-// Track original values for edit detection
-let originalTitle = "";
-let originalContent = "";
-let originalContentHTML = "";
+// Original values for change detection
+let originalState = {
+  title: "",
+  content: "",
+  checklist: [],
+  category: "personal",
+  color: "default",
+  pinned: false
+};
 
-// Helper Functions
-function getUserGreeting(email) {
-  if (!email) return "Your Notes";
-  const name = email.split("@")[0];
-  const displayName = name.charAt(0).toUpperCase() + name.slice(1);
-  return `Hello, ${displayName}!`;
-}
-
-function showToast(message, type = "info") {
-  const toastContainer = document.getElementById("toastContainer");
-  if (!toastContainer) return;
-  const toast = document.createElement("div");
-  const colors = {
-    success: "bg-green-600",
-    error: "bg-red-600",
-    warning: "bg-yellow-600",
-    info: "bg-gray-800",
-  };
-  toast.className = `toast ${colors[type]} text-white px-4 py-2 rounded-lg shadow-lg text-sm`;
-  toast.textContent = message;
-  toastContainer.appendChild(toast);
-  setTimeout(() => toast.remove(), 3000);
-}
-
-function initModalQuill() {
-  const editorContainer = document.getElementById("modalEditorContainer");
-  if (!modalQuill && editorContainer) {
-    modalQuill = new Quill("#modalEditorContainer", {
-      theme: "snow",
-      modules: { toolbar: "#modalToolbar" },
-      placeholder: "Write your note here...",
-    });
-    const toolbar = modalQuill.getModule("toolbar");
-    if (toolbar && toolbar.removeHandler) {
-      toolbar.removeHandler("image");
-    }
-  }
-}
-
-function addModalChecklistItem(text = "", completed = false) {
-  if (!modalChecklistContainer) return;
-  const itemDiv = document.createElement("div");
-  itemDiv.className = "checklist-item";
-  itemDiv.innerHTML = `
-    <input type="checkbox" ${
-      completed ? "checked" : ""
-    } class="checklist-checkbox">
-    <input type="text" value="${escapeHtml(
-      text
-    )}" placeholder="Checklist item..." class="checklist-text">
-    <button type="button" class="remove-checklist">✕</button>
-  `;
-  const checkbox = itemDiv.querySelector(".checklist-checkbox");
-  const textInput = itemDiv.querySelector(".checklist-text");
-  const removeBtn = itemDiv.querySelector(".remove-checklist");
-
-  checkbox.addEventListener("change", () => {
-    if (checkbox.checked) itemDiv.classList.add("completed");
-    else itemDiv.classList.remove("completed");
-    updateModalChecklistItems();
-  });
-  textInput.addEventListener("input", () => updateModalChecklistItems());
-  removeBtn.addEventListener("click", () => {
-    itemDiv.remove();
-    updateModalChecklistItems();
-  });
-  modalChecklistContainer.appendChild(itemDiv);
-  if (completed) itemDiv.classList.add("completed");
-  updateModalChecklistItems();
-  if (typeof lucide !== "undefined") lucide.createIcons();
-}
-
-function updateModalChecklistItems() {
-  modalChecklistItems = [];
-  if (!modalChecklistContainer) return;
-  document
-    .querySelectorAll("#modalChecklistContainer .checklist-item")
-    .forEach((item) => {
-      modalChecklistItems.push({
-        text: item.querySelector(".checklist-text").value,
-        completed: item.querySelector(".checklist-checkbox").checked,
-      });
-    });
-}
-
-function showAddNoteModal() {
-  if (!modalNoteTitle) return;
-  modalNoteTitle.value = "";
-  if (modalQuill) modalQuill.root.innerHTML = "";
-  if (modalNoteCategory) modalNoteCategory.value = "personal";
-  if (modalChecklistContainer) modalChecklistContainer.innerHTML = "";
-  modalChecklistItems = [];
-  modalPinnedStatus = false;
-  if (modalPinNoteBtn) {
-    modalPinNoteBtn.classList.remove("text-amber-500", "bg-amber-50");
-    modalPinNoteBtn.classList.add("text-gray-400");
-  }
-  if (addNoteModal) {
-    addNoteModal.classList.remove("hidden");
-    addNoteModal.classList.add("flex");
-  }
-  initModalQuill();
-  if (typeof lucide !== "undefined") lucide.createIcons();
-}
-
-function closeAddNoteModalFunc() {
-  if (addNoteModal) {
-    addNoteModal.classList.add("hidden");
-    addNoteModal.classList.remove("flex");
-  }
-}
-
-async function saveModalNote() {
-  const user = auth.currentUser;
-  if (!user) return;
-
-  const title = modalNoteTitle ? modalNoteTitle.value.trim() : "";
-  const content = modalQuill ? modalQuill.root.innerHTML : "";
-  const category = modalNoteCategory ? modalNoteCategory.value : "personal";
-  const pinned = modalPinnedStatus;
-
-  if (
-    !title &&
-    (!content || content === "<p><br></p>") &&
-    modalChecklistItems.length === 0
-  ) {
-    showToast("Please add a title, content, or checklist item", "warning");
-    return;
-  }
-
-  if (saveModalNoteBtn) {
-    saveModalNoteBtn.disabled = true;
-    saveModalNoteBtn.innerHTML = "Saving...";
-  }
-
-  try {
-    await addDoc(collection(db, "notes"), {
-      userId: user.uid,
-      title: title || "Untitled",
-      content: content,
-      category: category,
-      pinned: pinned,
-      checklist: modalChecklistItems,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-    closeAddNoteModalFunc();
-    showToast("Note saved!", "success");
-  } catch (error) {
-    showToast("Error: " + error.message, "error");
-  } finally {
-    if (saveModalNoteBtn) {
-      saveModalNoteBtn.innerHTML = "Save Note";
-      saveModalNoteBtn.disabled = false;
-    }
-  }
-}
-
-function openNoteModal(note) {
-  currentNoteId = note.id;
-  originalTitle = note.title || "";
-  originalContent = note.content || "";
-  originalContentHTML = note.content || "";
-
-  if (modalTitle) {
-    modalTitle.value = originalTitle;
-    modalTitle.removeAttribute("readonly");
-  }
-
-  if (modalContent) {
-    modalContent.innerHTML = originalContent;
-    modalContent.setAttribute("contenteditable", "true");
-  }
-
-  if (modalCategory) {
-    modalCategory.textContent = note.category;
-    modalCategory.className = `category-badge category-${note.category}`;
-  }
-
-  if (modalSave) {
-    modalSave.disabled = true;
-    modalSave.classList.add("opacity-50", "cursor-not-allowed");
-    modalSave.classList.remove("hover:bg-gray-900");
-  }
-
-  if (modalChecklist) {
-    if (note.checklist && note.checklist.length) {
-      modalChecklist.innerHTML =
-        '<p class="font-medium text-sm mb-2">Checklist:</p>';
-      note.checklist.forEach((item) => {
-        modalChecklist.innerHTML += `
-          <div class="flex items-center gap-2 py-1">
-            <input type="checkbox" ${
-              item.completed ? "checked" : ""
-            } class="w-4 h-4" style="accent-color: #1f2937">
-            <span class="${
-              item.completed ? "line-through text-gray-400" : ""
-            } text-sm">${escapeHtml(item.text)}</span>
-          </div>
-        `;
-      });
-    } else {
-      modalChecklist.innerHTML = "";
-    }
-  }
-
-  if (viewNoteModal) {
-    viewNoteModal.classList.remove("hidden");
-    viewNoteModal.classList.add("flex");
-  }
-
-  setupViewModalFormatting();
-
-  if (typeof lucide !== "undefined") lucide.createIcons();
-}
-
-// Check if content has changed (ignoring whitespace)
-function hasContentChanged() {
-  const currentTitle = modalTitle ? modalTitle.value.trim() : "";
-  const currentContentHTML = modalContent ? modalContent.innerHTML : "";
-  const currentContentText = modalContent ? modalContent.innerText.trim() : "";
-
-  const originalTitleTrimmed = originalTitle.trim();
-  const originalContentTextTrimmed = originalContent.trim();
-  const originalContentHTMLTrimmed = originalContentHTML.trim();
-
-  return (
-    currentTitle !== originalTitleTrimmed ||
-    currentContentText !== originalContentTextTrimmed ||
-    currentContentHTML !== originalContentHTMLTrimmed
-  );
-}
-
-// Enable save button when changes are detected
-function checkAndEnableSave() {
-  if (!modalSave) return;
-  if (hasContentChanged()) {
-    modalSave.disabled = false;
-    modalSave.classList.remove("opacity-50", "cursor-not-allowed");
-    modalSave.classList.add("hover:bg-gray-900");
-  } else {
-    modalSave.disabled = true;
-    modalSave.classList.add("opacity-50", "cursor-not-allowed");
-    modalSave.classList.remove("hover:bg-gray-900");
-  }
-}
-
-async function updateNote() {
-  if (!currentNoteId) return;
-
-  if (!hasContentChanged()) {
-    showToast("No changes to save", "info");
-    return;
-  }
-
-  if (modalSave) {
-    modalSave.disabled = true;
-    const originalText = modalSave.innerHTML;
-    modalSave.innerHTML =
-      '<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto"></div>';
-
-    try {
-      await updateDoc(doc(db, "notes", currentNoteId), {
-        title: modalTitle ? modalTitle.value.trim() || "Untitled" : "Untitled",
-        content: modalContent ? modalContent.innerHTML : "",
-        updatedAt: serverTimestamp(),
-      });
-      if (viewNoteModal) viewNoteModal.classList.add("hidden");
-      showToast("Note updated!", "success");
-    } catch (error) {
-      showToast("Error: " + error.message, "error");
-      modalSave.disabled = false;
-      modalSave.innerHTML = originalText;
-    }
-  }
-}
-
-async function deleteNote(id) {
-  if (confirm("Delete this note?")) {
-    await deleteDoc(doc(db, "notes", id));
-    if (viewNoteModal) viewNoteModal.classList.add("hidden");
-    showToast("Note deleted!", "success");
-  }
-}
-
-function closeNoteModal() {
-  if (viewNoteModal) {
-    viewNoteModal.classList.add("hidden");
-    viewNoteModal.classList.remove("flex");
-  }
-  currentNoteId = null;
-  if (modalSave) modalSave.disabled = false;
-}
-
-function formatDate(timestamp) {
-  if (!timestamp) return "";
-  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-  const now = new Date();
-  const diffMs = now - date;
-  const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 1) return "Just now";
-  if (diffMins < 60) return `${diffMins} min ago`;
-  if (diffMins < 1440) return `${Math.floor(diffMins / 60)} hours ago`;
-  return date.toLocaleDateString();
-}
-
+// Helper: Escape HTML
 function escapeHtml(str) {
   if (!str) return "";
-  return String(str).replace(
-    /[&<>]/g,
-    (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[m])
-  );
+  return String(str).replace(/[&<>]/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[m]));
 }
 
-function subscribeToNotes(userId) {
-  if (unsubscribeNotes) unsubscribeNotes();
-  const q = query(
-    collection(db, "notes"),
-    where("userId", "==", userId),
-    orderBy("updatedAt", "desc")
-  );
+// Helper: Show Toast
+function showToast(message, type = "info") {
+  const container = document.getElementById("toastContainer");
+  if (!container) return;
+  const toast = document.createElement("div");
+  const bg = type === 'error' ? 'bg-rose-500' : 'bg-slate-800';
+  toast.className = `${bg} text-white px-6 py-3 rounded-2xl shadow-xl font-medium animate-in`;
+  toast.innerHTML = message;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 2500);
+}
 
-  unsubscribeNotes = onSnapshot(q, (snapshot) => {
-    if (!notesGridContainer) return;
+// Helper: Format Date
+function formatDate(timestamp) {
+  if (!timestamp) return "Just now";
+  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + " at " + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
 
-    let notes = [];
-    snapshot.forEach((doc) => notes.push({ id: doc.id, ...doc.data() }));
+// Helper: Dynamic Greeting
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
 
-    notes.sort((a, b) => {
-      if (a.pinned && !b.pinned) return -1;
-      if (!a.pinned && b.pinned) return 1;
-      return new Date(b.updatedAt) - new Date(a.updatedAt);
+// Quill Initialization (Pre-initialized for performance)
+function initQuill() {
+  if (!modalQuill) {
+    modalQuill = new Quill("#noteEditorContainer", {
+      theme: "snow",
+      modules: {
+        toolbar: [
+          ["bold", "italic", "underline"],
+          [{ list: "ordered" }, { list: "bullet" }],
+          ["clean"],
+        ],
+      },
+      placeholder: "Start typing your thoughts...",
     });
+    modalQuill.on('text-change', checkChanges);
+  }
+}
 
-    if (currentFilter !== "all")
-      notes = notes.filter((n) => n.category === currentFilter);
-
-    if (notes.length === 0) {
-      notesGridContainer.innerHTML = `<div class="col-span-full text-center py-16 text-gray-400">No notes yet. Click "Add Note" to create one!</div>`;
-      return;
-    }
-
-    notesGridContainer.innerHTML = "";
-    notes.forEach((note) => {
-      const tempDiv = document.createElement("div");
-      tempDiv.innerHTML = note.content || "";
-      const plainText = tempDiv.textContent || tempDiv.innerText || "";
-      const contentPreview =
-        plainText.substring(0, 100) ||
-        (note.checklist?.length
-          ? `${note.checklist.length} checklist item(s)`
-          : "No content");
-
-      const card = document.createElement("div");
-      card.className = `note-card bg-white rounded-xl border ${
-        note.pinned ? "border-amber-200 shadow-md" : "border-gray-200"
-      } p-5 cursor-pointer hover:shadow-md transition-all relative`;
-      if (note.pinned) {
-        card.classList.add("bg-gradient-to-br", "from-white", "to-amber-50");
-      }
-
-      card.innerHTML = `
-        <div class="flex justify-between items-start mb-3">
-          <div class="flex items-start gap-2 flex-1">
-            ${
-              note.pinned
-                ? '<i data-lucide="pin" class="w-4 h-4 text-amber-500 rotate-45 flex-shrink-0 mt-0.5"></i>'
-                : ""
-            }
-            <h3 class="font-semibold text-gray-900 text-lg break-words whitespace-normal leading-tight">${
-              escapeHtml(note.title) || "Untitled"
-            }</h3>
-          </div>
-          <button class="delete-note-btn text-gray-400 hover:text-red-500 transition-colors flex-shrink-0 ml-2">
-            <i data-lucide="trash-2" class="w-4 h-4"></i>
-          </button>
-        </div>
-        <p class="text-sm text-gray-600 line-clamp-3 mb-4">${escapeHtml(
-          contentPreview
-        )}</p>
-        <div class="flex items-center justify-between">
-          <span class="category-badge category-${note.category}">${
-        note.category
-      }</span>
-          <span class="text-xs text-gray-400">${formatDate(
-            note.updatedAt
-          )}</span>
-        </div>
-      `;
-
-      card.addEventListener("click", (e) => {
-        if (!e.target.closest(".delete-note-btn")) openNoteModal(note);
+// Change Detection Engine
+function getChecklistItems() {
+  const items = [];
+  modalChecklistContainer.querySelectorAll(".checklist-item").forEach(item => {
+    const text = item.querySelector(".checklist-text").value.trim();
+    if (text) {
+      items.push({
+        text: text,
+        completed: item.querySelector(".checklist-checkbox").checked
       });
-      const deleteBtn = card.querySelector(".delete-note-btn");
-      if (deleteBtn) {
-        deleteBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          deleteNote(note.id);
+    }
+  });
+  return items;
+}
+
+function checkChanges() {
+  if (!modalSaveBtn) return;
+  
+  const currentTitle = modalTitle.value.trim();
+  const currentContent = modalQuill ? modalQuill.root.innerHTML : "";
+  const currentChecklist = getChecklistItems();
+  const currentCategory = modalCategorySelect.value;
+  const currentColor = modalColor;
+  const currentPinned = modalPinnedStatus;
+
+  const hasTitleChanged = currentTitle !== originalState.title.trim();
+  const hasContentChanged = (currentContent !== originalState.content) && (currentContent !== "<p><br></p>" || originalState.content !== "");
+  const hasCategoryChanged = currentCategory !== originalState.category;
+  const hasColorChanged = currentColor !== originalState.color;
+  const hasPinnedChanged = currentPinned !== originalState.pinned;
+  const hasChecklistChanged = JSON.stringify(currentChecklist) !== JSON.stringify(originalState.checklist);
+
+  const isChanged = hasTitleChanged || hasContentChanged || hasCategoryChanged || hasColorChanged || hasPinnedChanged || hasChecklistChanged;
+  const isNotEmpty = currentTitle !== "" || (currentContent !== "" && currentContent !== "<p><br></p>") || currentChecklist.length > 0;
+
+  modalSaveBtn.disabled = !isChanged || (currentNoteId === null && !isNotEmpty);
+}
+
+// Checklist Management
+function addChecklistItem(text = "", completed = false) {
+  const itemDiv = document.createElement("div");
+  itemDiv.className = "checklist-item group flex items-start gap-4 p-3 bg-white hover:bg-slate-50 rounded-2xl border border-transparent hover:border-slate-100 transition-all";
+  itemDiv.innerHTML = `
+    <input type="checkbox" ${completed ? "checked" : ""} class="checklist-checkbox w-5 h-5 rounded-lg border-2 border-slate-200 text-primary focus:ring-primary/20 transition-all cursor-pointer mt-0.5">
+    <input type="text" value="${escapeHtml(text)}" placeholder="Enter task details..." class="checklist-text flex-1 bg-transparent py-0 text-slate-600 focus:outline-none font-medium placeholder:text-slate-300">
+    <button type="button" class="p-1 opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-500 transition-all remove-task">
+      <i data-lucide="trash-2" class="w-4 h-4"></i>
+    </button>
+  `;
+  
+  const checkbox = itemDiv.querySelector(".checklist-checkbox");
+  const textInput = itemDiv.querySelector(".checklist-text");
+  const removeBtn = itemDiv.querySelector(".remove-task");
+
+  checkbox.addEventListener("change", () => {
+    itemDiv.classList.toggle("completed", checkbox.checked);
+    checkChanges();
+  });
+  textInput.addEventListener("input", checkChanges);
+  removeBtn.addEventListener("click", () => {
+    itemDiv.remove();
+    checkChanges();
+  });
+  
+  modalChecklistContainer.appendChild(itemDiv);
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  textInput.focus();
+}
+
+// Modal Handlers
+function openAddModal() {
+  currentNoteId = null;
+  originalState = {
+    title: "",
+    content: "",
+    checklist: [],
+    category: userCategories.length > 0 ? userCategories[0].name : "personal",
+    color: "default",
+    pinned: false
+  };
+
+  modalTitle.value = "";
+  if (modalQuill) modalQuill.root.innerHTML = "";
+  modalChecklistContainer.innerHTML = "";
+  modalPinnedStatus = false;
+  modalColor = "default";
+  lastUpdatedDisplay.textContent = "";
+  modalDeleteBtn.classList.add("hidden");
+  
+  updateCategorySelect();
+  modalCategorySelect.value = originalState.category;
+  updatePinUI();
+  updateColorUI();
+  checkChanges();
+  noteModal.classList.remove("hidden");
+  noteModal.classList.add("flex");
+  setTimeout(() => modalTitle.focus(), 50);
+}
+
+function openEditModal(note) {
+  currentNoteId = note.id;
+  originalState = {
+    title: note.title || "",
+    content: note.content || "",
+    checklist: note.checklist ? JSON.parse(JSON.stringify(note.checklist)) : [],
+    category: note.category || "personal",
+    color: note.color || "default",
+    pinned: note.pinned || false
+  };
+
+  modalTitle.value = originalState.title;
+  if (modalQuill) modalQuill.root.innerHTML = originalState.content;
+  updateCategorySelect();
+  modalCategorySelect.value = originalState.category;
+  modalPinnedStatus = originalState.pinned;
+  modalColor = originalState.color;
+  modalChecklistContainer.innerHTML = "";
+  
+  if (note.checklist) {
+    note.checklist.forEach(item => addChecklistItem(item.text, item.completed));
+  }
+  
+  lastUpdatedDisplay.textContent = `Edited ${formatDate(note.updatedAt)}`;
+  modalDeleteBtn.classList.remove("hidden");
+  
+  updatePinUI();
+  updateColorUI();
+  checkChanges();
+  noteModal.classList.remove("hidden");
+  noteModal.classList.add("flex");
+}
+
+function closeNoteModalFunc() {
+  noteModal.classList.add("hidden");
+  noteModal.classList.remove("flex");
+  currentNoteId = null;
+}
+
+function updatePinUI() {
+  modalPinNoteBtn.classList.toggle("text-primary", modalPinnedStatus);
+  modalPinNoteBtn.classList.toggle("bg-primary/5", modalPinnedStatus);
+}
+
+function updateColorUI() {
+  const colorClasses = ["note-color-default", "note-color-gray", "note-color-brown", "note-color-orange", "note-color-yellow", "note-color-green", "note-color-blue", "note-color-purple", "note-color-pink", "note-color-red"];
+  if (modalContent) {
+    modalContent.classList.remove(...colorClasses);
+    modalContent.classList.add(`note-color-${modalColor}`);
+  }
+  document.querySelectorAll(".color-swatch").forEach(swatch => swatch.classList.toggle("active", swatch.dataset.color === modalColor));
+  
+  const badge = document.getElementById("modalCategoryBadge");
+  badge.textContent = modalCategorySelect.value;
+}
+
+// Category Logic
+function updateCategorySelect() {
+  const currentVal = modalCategorySelect.value;
+  modalCategorySelect.innerHTML = "";
+  const standards = ["personal", "work", "ideas", "tasks", "important"];
+  standards.forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c;
+    opt.textContent = c.charAt(0).toUpperCase() + c.slice(1);
+    modalCategorySelect.appendChild(opt);
+  });
+  userCategories.forEach(c => {
+    if (!standards.includes(c.name.toLowerCase())) {
+        const opt = document.createElement("option");
+        opt.value = c.name;
+        opt.textContent = c.name;
+        modalCategorySelect.appendChild(opt);
+    }
+  });
+  if (currentVal) modalCategorySelect.value = currentVal;
+}
+
+async function addCustomCategory() {
+  const name = newCategoryInput.value.trim();
+  if (!name) return;
+  const user = auth.currentUser;
+  if (!user) return;
+  if (userCategories.find(c => c.name.toLowerCase() === name.toLowerCase())) return showToast("Category exists");
+
+  try {
+    await addDoc(collection(db, "categories"), { userId: user.uid, name: name, createdAt: serverTimestamp() });
+    newCategoryInput.value = "";
+    addCategoryContainer.classList.add("hidden");
+    showAddCategoryBtn.classList.remove("hidden");
+    showToast("Category added");
+  } catch (err) { showToast(err.message, "error"); }
+}
+
+async function editCategory(category, e) {
+    if (e) e.stopPropagation();
+    const newName = prompt("Rename category:", category.name);
+    if (!newName || newName.trim() === category.name) return;
+    const finalName = newName.trim();
+
+    try {
+        await updateDoc(doc(db, "categories", category.id), { name: finalName });
+        const q = query(collection(db, "notes"), where("userId", "==", auth.currentUser.uid), where("category", "==", category.name));
+        const snapshots = await getDocs(q);
+        const batch = writeBatch(db);
+        snapshots.forEach(noteDoc => {
+            batch.update(doc(db, "notes", noteDoc.id), { category: finalName });
         });
-      }
-      notesGridContainer.appendChild(card);
-    });
-    if (typeof lucide !== "undefined") lucide.createIcons();
+        await batch.commit();
+        showToast("Category updated");
+    } catch (err) { showToast(err.message, "error"); }
+}
+
+async function deleteCategory(category, e) {
+    if (e) e.stopPropagation();
+    if (confirm(`Remove the "${category.name}" category?`)) {
+        try { 
+            await deleteDoc(doc(db, "categories", category.id)); 
+            showToast("Category removed");
+        } catch (err) { showToast(err.message, "error"); }
+    }
+}
+
+function subscribeToCategories(userId) {
+  if (unsubscribeCategories) unsubscribeCategories();
+  const q = query(collection(db, "categories"), where("userId", "==", userId), orderBy("name", "asc"));
+  unsubscribeCategories = onSnapshot(q, (snapshot) => {
+    userCategories = [];
+    snapshot.forEach(doc => userCategories.push({ id: doc.id, ...doc.data() }));
+    renderCategories();
+    updateCategorySelect();
   });
 }
 
-// Sidebar Functions
-function openMobileSidebar() {
-  if (window.innerWidth < 768 && sidebar) {
-    sidebar.style.transform = "translateX(0)";
-    if (sidebarOverlay) sidebarOverlay.classList.remove("hidden");
-    document.body.style.overflow = "hidden";
+function renderCategories() {
+  dynamicCategories.innerHTML = `
+    <button data-category="all" class="category-filter-btn ${currentFilter === 'all' ? 'active' : ''}">
+        <i data-lucide="layout" class="w-4 h-4"></i>
+        <span>All Notes</span>
+    </button>
+  `;
+  
+  // Attach All Notes Listener immediately after innerHTML set
+  const allBtn = dynamicCategories.querySelector('[data-category="all"]');
+  if (allBtn) {
+    allBtn.addEventListener("click", () => setFilter("all"));
+  }
+
+  const defaults = ["personal", "work", "ideas", "tasks", "important"];
+  const icons = { personal: "user", work: "briefcase", ideas: "sparkles", tasks: "check-circle", important: "star" };
+  defaults.forEach(c => {
+    const btn = document.createElement("button");
+    btn.dataset.category = c;
+    btn.className = `category-filter-btn ${currentFilter === c ? 'active' : ''}`;
+    btn.innerHTML = `<i data-lucide="${icons[c]}" class="w-4 h-4 text-slate-400"></i><span>${c.charAt(0).toUpperCase() + c.slice(1)}</span>`;
+    btn.addEventListener("click", () => setFilter(c));
+    dynamicCategories.appendChild(btn);
+  });
+  
+  userCategories.forEach(c => {
+    const div = document.createElement("div");
+    div.className = "category-item group";
+    const btn = document.createElement("button");
+    btn.dataset.category = c.name;
+    btn.className = `category-filter-btn w-full ${currentFilter === c.name ? 'active' : ''}`;
+    btn.innerHTML = `
+        <i data-lucide="hash" class="w-4 h-4 text-slate-400"></i>
+        <span class="truncate pr-16">${c.name}</span>
+        <div class="category-actions">
+            <button class="action-icon-btn edit-cat"><i data-lucide="edit-2" class="w-3 h-3"></i></button>
+            <button class="action-icon-btn action-icon-btn-danger delete-cat"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+        </div>
+    `;
+    btn.addEventListener("click", (e) => {
+        if (!e.target.closest('.category-actions')) setFilter(c.name);
+    });
+    btn.querySelector(".edit-cat").addEventListener("click", (e) => editCategory(c, e));
+    btn.querySelector(".delete-cat").addEventListener("click", (e) => deleteCategory(c, e));
+    div.appendChild(btn);
+    dynamicCategories.appendChild(div);
+  });
+  if (typeof lucide !== "undefined") lucide.createIcons();
+}
+
+function setFilter(cat) {
+    currentFilter = cat;
+    renderCategories();
+    renderNotes();
+    if (window.innerWidth < 1024) closeSidebar();
+}
+
+// Note Actions
+async function saveNote() {
+  const user = auth.currentUser;
+  if (!user) return;
+  const title = modalTitle.value.trim();
+  modalSaveBtn.disabled = true;
+  modalSaveBtn.innerHTML = `Saving...`;
+  try {
+    const noteData = {
+      userId: user.uid,
+      title: title || "Untitled",
+      content: modalQuill.root.innerHTML,
+      checklist: getChecklistItems(),
+      category: modalCategorySelect.value,
+      color: modalColor,
+      pinned: modalPinnedStatus,
+      updatedAt: serverTimestamp(),
+    };
+    if (currentNoteId) { await updateDoc(doc(db, "notes", currentNoteId), noteData); showToast("Workspace updated"); }
+    else { noteData.createdAt = serverTimestamp(); await addDoc(collection(db, "notes"), noteData); showToast("Note captured"); }
+    closeNoteModalFunc();
+  } catch (err) { showToast(err.message, "error"); } finally {
+    modalSaveBtn.disabled = false;
+    modalSaveBtn.innerHTML = `<i data-lucide="check" class="w-5 h-5 font-bold"></i> Done`;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
   }
 }
 
-function closeMobileSidebar() {
-  if (window.innerWidth < 768 && sidebar) {
-    sidebar.style.transform = "translateX(-100%)";
-    if (sidebarOverlay) sidebarOverlay.classList.add("hidden");
-    document.body.style.overflow = "";
-  }
+// Custom Deletion Flow
+async function deleteNoteConfirmed() {
+    if (!currentNoteId) return;
+    try {
+        if (rememberDeleteDecision.checked) localStorage.setItem('skipDeleteConfirm', 'true');
+        await deleteDoc(doc(db, "notes", currentNoteId));
+        deleteConfirmModal.classList.add("hidden");
+        closeNoteModalFunc();
+        showToast("Note released");
+    } catch (err) { showToast(err.message, "error"); }
 }
 
-function handleResize() {
-  const mobileMenuToggleElem = document.getElementById("mobileMenuToggle");
-  const mobileHeaderElem = document.getElementById("mobileHeader");
+function triggerDeletion() {
+    if (!currentNoteId) return;
+    const skip = localStorage.getItem('skipDeleteConfirm') === 'true';
+    if (skip) return deleteNoteConfirmed();
+    
+    const note = allNotes.find(n => n.id === currentNoteId);
+    deleteConfirmTitle.textContent = `Delete "${note?.title || 'this note'}"?`;
+    deleteConfirmModal.classList.remove("hidden");
+}
 
-  if (window.innerWidth >= 768) {
-    closeMobileSidebar();
-    if (auth.currentUser && sidebar) {
-      sidebar.style.transform = "translateX(0)";
-      if (mainContent) mainContent.classList.add("md:ml-64");
-      if (mobileMenuToggleElem) {
-        mobileMenuToggleElem.classList.add("hidden");
-        mobileMenuToggleElem.style.display = "none";
-      }
-      if (mobileHeaderElem) {
-        mobileHeaderElem.classList.add("hidden");
-        mobileHeaderElem.style.display = "none";
-      }
-    }
-  } else {
-    if (auth.currentUser && sidebar) {
-      sidebar.style.transform = "translateX(-100%)";
-      if (mainContent) mainContent.classList.remove("md:ml-64");
-      if (mobileMenuToggleElem) {
-        mobileMenuToggleElem.classList.remove("hidden");
-        mobileMenuToggleElem.style.display = "block";
-      }
-      if (mobileHeaderElem) {
-        mobileHeaderElem.classList.remove("hidden");
-        mobileHeaderElem.style.display = "flex";
-      }
-    }
+// Rendering
+function subscribeToNotes(userId) {
+  if (unsubscribeNotes) unsubscribeNotes();
+  const q = query(collection(db, "notes"), where("userId", "==", userId), orderBy("updatedAt", "desc"));
+  unsubscribeNotes = onSnapshot(q, (snapshot) => {
+    allNotes = [];
+    snapshot.forEach(doc => allNotes.push({ id: doc.id, ...doc.data() }));
+    renderNotes();
+    // Re-render categories on each state change to ensure sync
+    renderCategories();
+  });
+}
+
+function renderNotes() {
+  if (!notesGridContainer) return;
+  let filtered = allNotes;
+  if (currentFilter !== "all") filtered = filtered.filter(n => n.category === currentFilter);
+  if (searchTerm) {
+    const s = searchTerm.toLowerCase();
+    filtered = filtered.filter(n => n.title.toLowerCase().includes(s) || n.content.toLowerCase().includes(s));
   }
+  
+  // Sort: Pinned first, then descending by updatedAt
+  filtered.sort((a, b) => {
+    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+    const timeA = a.updatedAt ? (typeof a.updatedAt.toMillis === 'function' ? a.updatedAt.toMillis() : a.updatedAt) : 0;
+    const timeB = b.updatedAt ? (typeof b.updatedAt.toMillis === 'function' ? b.updatedAt.toMillis() : b.updatedAt) : 0;
+    return timeB - timeA;
+  });
+
+  if (filtered.length === 0) {
+    notesGridContainer.innerHTML = `
+      <div class="col-span-full py-32 flex flex-col items-center justify-center text-center animate-in">
+        <div class="w-20 h-20 bg-slate-100 rounded-[28px] text-slate-300 flex items-center justify-center mb-6">
+          <i data-lucide="feather" class="w-10 h-10"></i>
+        </div>
+        <h3 class="font-display text-2xl font-bold text-slate-800 mb-2">Workspace is looking empty</h3>
+        <p class="text-slate-500 font-medium max-w-[260px] mx-auto leading-relaxed">It's a blank canvas. Start capturing your ideas or tasks today.</p>
+      </div>`;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    return;
+  }
+  
+  notesGridContainer.innerHTML = "";
+  let hasRenderedPinnedHeader = false;
+  let hasRenderedUnpinnedHeader = false;
+
+  const hasPinned = filtered.some(n => n.pinned);
+  const hasUnpinned = filtered.some(n => !n.pinned);
+
+  filtered.forEach(note => {
+    // Inject Section Headers
+    if (note.pinned && !hasRenderedPinnedHeader) {
+      const header = document.createElement("div");
+      header.className = "col-span-full section-label mt-2";
+      header.innerHTML = `<i data-lucide="pin" class="w-3 h-3 text-primary fill-primary"></i> Pinned`;
+      notesGridContainer.appendChild(header);
+      hasRenderedPinnedHeader = true;
+    } else if (!note.pinned && !hasRenderedUnpinnedHeader && hasPinned) {
+      const header = document.createElement("div");
+      header.className = "col-span-full section-label mt-6";
+      header.innerHTML = `Others`;
+      notesGridContainer.appendChild(header);
+      hasRenderedUnpinnedHeader = true;
+    }
+
+    const card = document.createElement("div");
+    card.className = `note-card note-color-${note.color || 'default'} animate-in`;
+    const temp = document.createElement("div");
+    temp.innerHTML = note.content || "";
+    const previewText = temp.textContent || "";
+    card.innerHTML = `
+      <div class="flex flex-col h-full overflow-hidden">
+        <h3 class="text-[12px] font-bold text-slate-800 line-clamp-2 leading-tight uppercase tracking-tight mb-1.5">${escapeHtml(note.title) || 'Untitled'}</h3>
+        ${note.pinned ? '<div class="note-pinned-badge"><i data-lucide="pin" class="w-2.5 h-2.5"></i> Pinned</div>' : ''}
+        <p class="text-[11px] text-slate-500 line-clamp-4 leading-relaxed flex-1 overflow-hidden opacity-90">${escapeHtml(previewText)}</p>
+        <div class="note-card-meta">
+           <span class="note-card-meta-date">${formatDate(note.updatedAt)}</span>
+           <span class="note-card-meta-cat">${note.category}</span>
+        </div>
+      </div>
+    `;
+    card.addEventListener("click", () => openEditModal(note));
+    notesGridContainer.appendChild(card);
+  });
+  if (typeof lucide !== "undefined") lucide.createIcons();
 }
 
 function renderAuthUI(user) {
-  const mobileHeader = document.getElementById("mobileHeader");
-  const mobileMenuToggleElem = document.getElementById("mobileMenuToggle");
-  const welcomeGreeting = document.getElementById("welcomeGreeting");
-  const userEmailDisplay = document.getElementById("userEmailDisplay");
-
+  const elements = document.querySelectorAll(".auth-element");
   if (user) {
-    if (desktopHeader) desktopHeader.classList.remove("hidden");
-
-    if (window.innerWidth >= 768) {
-      if (sidebar) sidebar.style.transform = "translateX(0)";
-      if (mainContent) mainContent.classList.add("md:ml-64");
-      if (mobileMenuToggleElem) mobileMenuToggleElem.classList.add("hidden");
-      if (mobileHeader) mobileHeader.classList.add("hidden");
-    } else {
-      if (sidebar) sidebar.style.transform = "translateX(-100%)";
-      if (mainContent) mainContent.classList.remove("md:ml-64");
-      if (mobileMenuToggleElem) {
-        mobileMenuToggleElem.classList.remove("hidden");
-        mobileMenuToggleElem.style.display = "block";
-      }
-      if (mobileHeader) {
-        mobileHeader.classList.remove("hidden");
-        mobileHeader.style.display = "flex";
-      }
+    elements.forEach(el => el.classList.remove("auth-hidden"));
+    if (window.innerWidth >= 1024) {
+      sidebar.style.transform = "translateX(0)";
+      mainContent.classList.add("lg:ml-[280px]");
     }
-
-    if (welcomeGreeting)
-      welcomeGreeting.textContent = getUserGreeting(user.email);
-    if (userEmailDisplay) userEmailDisplay.textContent = user.email;
+    
+    // Dynamic Greeting
+    const welcomeGreeting = document.getElementById("welcomeGreeting");
+    if (welcomeGreeting) {
+       const displayName = user.email.split('@')[0];
+       const formattedName = displayName.charAt(0).toUpperCase() + displayName.slice(1);
+       welcomeGreeting.textContent = `${getGreeting()}, ${formattedName}.`;
+    }
 
     if (authContainer) {
       authContainer.innerHTML = `
-        <div class="text-center mb-3">
-          <div class="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-2">
-            <i data-lucide="user" class="w-5 h-5 text-white"></i>
-          </div>
-          <p class="text-sm font-medium text-gray-700 truncate">${escapeHtml(
-            user.email
-          )}</p>
+        <div class="p-3 bg-white/50 border border-slate-100 rounded-xl group flex items-center justify-between shadow-sm">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-yellow-400 text-xs font-bold">${user.email[0]}</div>
+                <div class="flex flex-col">
+                    <span class="text-xs font-bold text-slate-800 truncate w-24">${user.email.split('@')[0]}</span>
+                    <span class="text-[8px] font-bold text-slate-300 uppercase">Cloud Workspace</span>
+                </div>
+            </div>
+            <button id="logoutBtn" class="p-2 hover:bg-rose-50 hover:text-rose-500 text-slate-300 rounded-lg transition-all"><i data-lucide="log-out" class="w-4 h-4"></i></button>
         </div>
-        <button id="logoutBtn" class="w-full flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-white px-4 py-2 rounded-full hover:bg-red-500 transition-all border border-gray-200">
-          <i data-lucide="log-out" class="w-4 h-4"></i>
-          Sign out
-        </button>
       `;
-      const logoutBtn = document.getElementById("logoutBtn");
-      if (logoutBtn) logoutBtn.addEventListener("click", () => signOut(auth));
+      document.getElementById("logoutBtn").addEventListener("click", () => signOut(auth));
     }
-
-    if (notesGrid) notesGrid.classList.remove("hidden");
-    if (loginSection) loginSection.classList.add("hidden");
+    notesGrid.classList.remove("hidden");
+    loginSection.classList.add("hidden");
     subscribeToNotes(user.uid);
+    subscribeToCategories(user.uid);
   } else {
-    if (desktopHeader) desktopHeader.classList.add("hidden");
-
-    if (sidebar) sidebar.style.transform = "translateX(-100%)";
-    if (mainContent) mainContent.classList.remove("md:ml-64");
-
-    if (mobileMenuToggleElem) {
-      mobileMenuToggleElem.classList.add("hidden");
-      mobileMenuToggleElem.style.display = "none";
-    }
-    if (mobileHeader) {
-      mobileHeader.classList.add("hidden");
-      mobileHeader.style.display = "none";
-    }
-
-    if (welcomeGreeting) welcomeGreeting.textContent = "Your Notes";
-    if (userEmailDisplay) userEmailDisplay.textContent = "";
-
-    if (authContainer) authContainer.innerHTML = "";
-    if (notesGrid) notesGrid.classList.add("hidden");
-    if (loginSection) loginSection.classList.remove("hidden");
+    elements.forEach(el => el.classList.add("auth-hidden"));
+    sidebar.style.transform = "translateX(-100%)";
+    mainContent.classList.remove("lg:ml-[280px]");
+    notesGrid.classList.add("hidden");
+    loginSection.classList.remove("hidden");
     if (unsubscribeNotes) unsubscribeNotes();
+    if (unsubscribeCategories) unsubscribeCategories();
   }
   if (typeof lucide !== "undefined") lucide.createIcons();
 }
 
-// Formatting functions for view modal
-function applyViewFormat(command, value = null) {
-  document.execCommand(command, false, value);
-  setTimeout(() => {
-    checkAndEnableSave();
-    if (modalContent) {
-      originalContentHTML = modalContent.innerHTML;
-    }
-  }, 10);
-}
-
-function setupViewModalFormatting() {
-  const boldBtn = document.querySelector(".view-bold");
-  const italicBtn = document.querySelector(".view-italic");
-  const underlineBtn = document.querySelector(".view-underline");
-  const alignBtn = document.querySelector(".view-align");
-  const listBtn = document.querySelector(".view-list");
-  const linkBtn = document.querySelector(".view-link");
-
-  if (boldBtn) boldBtn.addEventListener("click", () => applyViewFormat("bold"));
-  if (italicBtn)
-    italicBtn.addEventListener("click", () => applyViewFormat("italic"));
-  if (underlineBtn)
-    underlineBtn.addEventListener("click", () => applyViewFormat("underline"));
-  if (alignBtn)
-    alignBtn.addEventListener("click", () => applyViewFormat("justifyLeft"));
-  if (listBtn)
-    listBtn.addEventListener("click", () =>
-      applyViewFormat("insertUnorderedList")
-    );
-  if (linkBtn) {
-    linkBtn.addEventListener("click", () => {
-      const url = prompt("Enter URL:", "https://");
-      if (url) applyViewFormat("createLink", url);
-    });
-  }
-}
-
-// Setup Event Listeners - Wait for DOM to be ready
+// Event Listeners
 document.addEventListener("DOMContentLoaded", () => {
-  // Add Note buttons
-  const sidebarAddBtn = document.getElementById("sidebarAddNoteBtn");
-  const mobileAddBtn = document.getElementById("mobileAddNoteBtn");
-  if (sidebarAddBtn) sidebarAddBtn.addEventListener("click", showAddNoteModal);
-  if (mobileAddBtn) mobileAddBtn.addEventListener("click", showAddNoteModal);
+  initQuill(); // Performance: Init once on load
 
-  // Modal buttons
-  if (closeAddNoteModal)
-    closeAddNoteModal.addEventListener("click", closeAddNoteModalFunc);
-  if (cancelModalNoteBtn)
-    cancelModalNoteBtn.addEventListener("click", closeAddNoteModalFunc);
-  if (saveModalNoteBtn)
-    saveModalNoteBtn.addEventListener("click", saveModalNote);
-  if (closeModal) closeModal.addEventListener("click", closeNoteModal);
-  if (modalDelete)
-    modalDelete.addEventListener("click", () => deleteNote(currentNoteId));
-  if (modalSave) modalSave.addEventListener("click", updateNote);
+  document.getElementById("sidebarAddNoteBtn").addEventListener("click", openAddModal);
+  document.getElementById("mobileAddNoteBtn")?.addEventListener("click", openAddModal);
+  
+  mobileMenuToggle.addEventListener("click", () => { sidebar.style.transform = "translateX(0)"; sidebarOverlay.classList.remove("hidden"); });
+  mobileMenuBtn?.addEventListener("click", () => { sidebar.style.transform = "translateX(0)"; sidebarOverlay.classList.remove("hidden"); });
+  closeSidebarBtn.addEventListener("click", () => { sidebar.style.transform = "translateX(-100%)"; sidebarOverlay.classList.add("hidden"); });
+  sidebarOverlay.addEventListener("click", () => { sidebar.style.transform = "translateX(-100%)"; sidebarOverlay.classList.add("hidden"); });
 
-  // Pin button
-  if (modalPinNoteBtn) {
-    modalPinNoteBtn.addEventListener("click", () => {
-      modalPinnedStatus = !modalPinnedStatus;
-      if (modalPinnedStatus) {
-        modalPinNoteBtn.classList.add("text-amber-500", "bg-amber-50");
-        modalPinNoteBtn.classList.remove("text-gray-400");
-        const pinIcon = modalPinNoteBtn.querySelector("i");
-        if (pinIcon) pinIcon.style.transform = "rotate(45deg)";
-      } else {
-        modalPinNoteBtn.classList.remove("text-amber-500", "bg-amber-50");
-        modalPinNoteBtn.classList.add("text-gray-400");
-        const pinIcon = modalPinNoteBtn.querySelector("i");
-        if (pinIcon) pinIcon.style.transform = "";
-      }
-    });
-  }
-
-  // Checklist button
-  if (modalAddChecklistBtn) {
-    modalAddChecklistBtn.addEventListener("click", () =>
-      addModalChecklistItem("", false)
-    );
-  }
-
-  // Edit detection for modal title and content
-  if (modalTitle) {
-    modalTitle.addEventListener("input", checkAndEnableSave);
-    modalTitle.addEventListener("keyup", checkAndEnableSave);
-  }
-
-  if (modalContent) {
-    modalContent.addEventListener("input", checkAndEnableSave);
-    modalContent.addEventListener("keyup", checkAndEnableSave);
-    modalContent.addEventListener("blur", checkAndEnableSave);
-    modalContent.addEventListener("mouseup", checkAndEnableSave);
-
-    const contentObserver = new MutationObserver(() => checkAndEnableSave());
-    contentObserver.observe(modalContent, {
-      childList: true,
-      subtree: true,
-      characterData: true,
-      attributes: true,
-      attributeFilter: ["style", "class"],
-    });
-  }
-
-  // Sidebar events
-  if (mobileMenuToggle)
-    mobileMenuToggle.addEventListener("click", openMobileSidebar);
-  if (mobileMenuBtn) mobileMenuBtn.addEventListener("click", openMobileSidebar);
-  if (closeSidebarBtn)
-    closeSidebarBtn.addEventListener("click", closeMobileSidebar);
-  if (sidebarOverlay)
-    sidebarOverlay.addEventListener("click", closeMobileSidebar);
-  window.addEventListener("resize", handleResize);
-
-  // Category filters
-  document.querySelectorAll(".category-filter-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      document
-        .querySelectorAll(".category-filter-btn")
-        .forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
-      currentFilter = btn.dataset.category;
-      if (auth.currentUser) subscribeToNotes(auth.currentUser.uid);
-    });
+  // Modal Buttons
+  closeModal.addEventListener("click", closeNoteModalFunc);
+  modalPinNoteBtn.addEventListener("click", () => { modalPinnedStatus = !modalPinnedStatus; updatePinUI(); checkChanges(); });
+  modalAddChecklistItemBtn.addEventListener("click", () => addChecklistItem());
+  modalSaveBtn.addEventListener("click", saveNote);
+  modalDeleteBtn.addEventListener("click", triggerDeletion);
+  
+  // Entire Body Clickable to Focus Quill
+  modalBody.addEventListener("click", (e) => {
+    if (e.target.closest('#noteEditorContainer') || e.target.closest('#modalTitle') || e.target.closest('.checklist-item') || e.target.closest('select')) return;
+    if (modalQuill) modalQuill.focus();
   });
 
-  // Login/Signup
-  const loginBtn = document.getElementById("loginBtn");
-  const signupBtn = document.getElementById("signupBtn");
+  // Input Listeners
+  modalTitle.addEventListener("input", checkChanges);
+  modalCategorySelect.addEventListener("change", () => { updateColorUI(); checkChanges(); });
+  colorPicker.addEventListener("click", (e) => {
+    const swatch = e.target.closest(".color-swatch");
+    if (swatch) { modalColor = swatch.dataset.color; updateColorUI(); checkChanges(); }
+  });
 
-  if (loginBtn) {
-    loginBtn.addEventListener("click", async () => {
-      const email = document.getElementById("loginEmail")?.value || "";
-      const pwd = document.getElementById("loginPassword")?.value || "";
-      if (!email || !pwd)
-        return showToast("Enter email and password", "warning");
-      try {
-        await signInWithEmailAndPassword(auth, email, pwd);
-        showToast("Welcome back!", "success");
-      } catch (err) {
-        showToast(err.message, "error");
-      }
+  // Category Logic
+  if (showAddCategoryBtn) {
+    showAddCategoryBtn.addEventListener("click", () => { 
+        showAddCategoryBtn.classList.add("hidden"); 
+        addCategoryContainer.classList.remove("hidden"); 
+        newCategoryInput.focus(); 
+    });
+  }
+  if (newCategoryInput) {
+    newCategoryInput.addEventListener("keydown", async (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            await addCustomCategory();
+        }
+        if (e.key === "Escape") { 
+            e.preventDefault();
+            addCategoryContainer.classList.add("hidden"); 
+            showAddCategoryBtn.classList.remove("hidden"); 
+        }
     });
   }
 
-  if (signupBtn) {
-    signupBtn.addEventListener("click", async () => {
-      const email = document.getElementById("loginEmail")?.value || "";
-      const pwd = document.getElementById("loginPassword")?.value || "";
-      if (!email || !pwd)
-        return showToast("Enter email and password", "warning");
-      if (pwd.length < 6)
-        return showToast("Password must be 6+ characters", "warning");
-      try {
-        await createUserWithEmailAndPassword(auth, email, pwd);
-        showToast("Account created!", "success");
-      } catch (err) {
-        showToast(err.message, "error");
-      }
-    });
-  }
+  // Delete Confirmation Logic
+  confirmDeleteBtn.addEventListener("click", deleteNoteConfirmed);
+  cancelDeleteBtn.addEventListener("click", () => deleteConfirmModal.classList.add("hidden"));
+
+  // Search & Profile
+  searchInput.addEventListener("input", (e) => { searchTerm = e.target.value; renderNotes(); });
+
+  // Auth Flow
+  document.getElementById("loginBtn").addEventListener("click", async () => {
+    const email = document.getElementById("loginEmail").value;
+    const pwd = document.getElementById("loginPassword").value;
+    if (!email || !pwd) return showToast("Credentials required");
+    try { await signInWithEmailAndPassword(auth, email, pwd); showToast("Authenticated"); } catch (err) { showToast(err.message, "error"); }
+  });
+  document.getElementById("signupBtn").addEventListener("click", async () => {
+    const email = document.getElementById("loginEmail").value;
+    const pwd = document.getElementById("loginPassword").value;
+    if (!email || !pwd || pwd.length < 6) return showToast("Min 6 chars");
+    try { await createUserWithEmailAndPassword(auth, email, pwd); showToast("Workspace ready"); } catch (err) { showToast(err.message, "error"); }
+  });
+
+  window.addEventListener("resize", () => {
+    if (window.innerWidth >= 1024 && auth.currentUser) {
+      sidebar.style.transform = "translateX(0)";
+      mainContent.classList.add("lg:ml-[280px]");
+    } else if (window.innerWidth < 1024) {
+      sidebar.style.transform = "translateX(-100%)";
+      mainContent.classList.remove("lg:ml-[280px]");
+    }
+  });
 });
 
-// Initialize
 onAuthStateChanged(auth, renderAuthUI);
