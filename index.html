@@ -40,7 +40,9 @@
     <div id="toastContainer" class="fixed bottom-4 right-4 z-[100] flex flex-col gap-2"></div>
 
     <!-- PWA Icons and Manifest -->
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23facc15' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12.67 19a2 2 0 0 0 1.416-.588l6.154-6.172a6 6 0 0 0-8.49-8.49L5.586 9.914A2 2 0 0 0 5 11.328V18a1 1 0 0 0 1 1z'></path><polyline points='16 8 22 2'></polyline><polyline points='17.5 15 9 15'></polyline></svg>">
+    <link rel="icon" type="image/png" href="icons/KYN.png?v=2">
+    <link rel="apple-touch-icon" href="icons/KYN.png?v=2">
+    <link rel="shortcut icon" href="icons/KYN.png?v=2">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Know Your Note">
@@ -77,14 +79,14 @@
         class="fixed left-0 top-0 h-full w-[280px] z-50 transform transition-transform duration-300 -translate-x-full lg:translate-x-0">
         <div class="flex flex-col h-full py-8">
             <!-- App Logo/Title -->
-            <div class="px-6 mb-10 mt-2 relative flex flex-col items-center justify-center text-center">
-                <button id="closeSidebarBtn" class="absolute right-2 top-0 lg:hidden p-2 hover:bg-slate-100 rounded-xl transition-colors">
+            <div class="px-6 mb-10 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <i data-lucide="feather" class="w-6 h-6 text-yellow-500"></i>
+                    <h1 class="font-display text-lg font-bold tracking-tight text-slate-800">Know Your Note</h1>
+                </div>
+                <button id="closeSidebarBtn" class="lg:hidden p-2 hover:bg-slate-100 rounded-xl transition-colors">
                     <i data-lucide="x" class="w-5 h-5 text-slate-400"></i>
                 </button>
-                <div class="flex flex-col items-center gap-3 mt-4">
-                    <i data-lucide="feather" class="w-12 h-12 text-yellow-400"></i>
-                    <h1 class="font-display text-2xl md:text-3xl font-bold tracking-tight text-slate-800">Know Your Note</h1>
-                </div>
             </div>
 
             <!-- Add Note Button -->
@@ -100,19 +102,19 @@
             <div class="flex-1 overflow-y-auto space-y-6">
                 <div>
                     <p class="text-[11px] font-bold text-slate-400 uppercase tracking-[0.15em] mb-4 px-8">Categories</p>
-                    <nav id="dynamicCategories" class="space-y-1">
+                    <nav id="dynamicCategories" class="space-y-1 px-6">
                         <!-- Dynamic categories will be injected here -->
                     </nav>
                 </div>
                 
                 <!-- Add Category Interaction -->
-                <div class="px-8">
+                <div class="px-6">
                     <div id="addCategoryContainer" class="hidden mb-2">
                         <input type="text" id="newCategoryInput" 
                             class="w-full px-4 py-2 text-sm bg-white border border-slate-200 rounded-xl focus:border-primary focus:outline-none shadow-sm" 
                             placeholder="Type category...">
                     </div>
-                    <button id="showAddCategoryBtn" class="flex items-center gap-2 px-1 py-1 text-xs font-bold text-primary/60 hover:text-primary transition-colors">
+                    <button id="showAddCategoryBtn" class="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-primary/60 hover:text-primary transition-colors">
                         <i data-lucide="plus" class="w-3 h-3"></i>
                         <span>New Category</span>
                     </button>
